@@ -25,6 +25,7 @@ const REGION_LABEL: Record<SupportedLocale, string> = {
   'zh-cn': '通知',
   'zh-tw': '通知',
   nl: 'Meldingen',
+  it: 'Notifiche',
   pl: 'Powiadomienia',
   th: 'การแจ้งเตือน',
   uk: 'Сповіщення',

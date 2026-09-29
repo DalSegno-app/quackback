@@ -106,6 +106,7 @@ Quackback.init({
     'zh-TW' |
     'nl' |
     'pl' |
+    'it' |
     'th' |
     'uk', // override auto-detect
   identity: { ssoToken }, // bundle identify into init

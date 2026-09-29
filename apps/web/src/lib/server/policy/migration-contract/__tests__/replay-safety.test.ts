@@ -353,6 +353,7 @@ describe('the real corpus', () => {
       '0305_sending_domain_setup.sql',
       '0308_remove_approvals_leftovers.sql',
       '0311_sending_domain_ownership_warning_sent.sql',
+      '0312_kb_translations_italian_search.sql',
     ])
   })
 

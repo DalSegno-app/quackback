@@ -20,6 +20,7 @@ export const WIDGET_LOCALES = [
   'zh-TW',
   'nl',
   'pl',
+  'it',
   'th',
   'uk',
 ] as const

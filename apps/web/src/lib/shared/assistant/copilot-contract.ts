@@ -172,6 +172,7 @@ export const TRANSLATE_LANGUAGES = [
   { value: 'Dutch', label: 'Nederlands' },
   { value: 'French', label: 'Français' },
   { value: 'German', label: 'Deutsch' },
+  { value: 'Italian', label: 'Italiano' },
   { value: 'Polish', label: 'Polski' },
   { value: 'Portuguese (Brazilian)', label: 'Português (Brasil)' },
   { value: 'Russian', label: 'Русский' },
