@@ -367,6 +367,7 @@ describe('replayGateVerdict', () => {
       '0290_files',
       '0291_legacy_surface_switches',
       '0292_account_profile_sync',
+      '0293_kb_translations_italian_search',
     ])
     const verdict = replayGateVerdict(before, verdictsFor(replaySetFor(before)), false)
     expect(verdict.ok).toBe(false)

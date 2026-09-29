@@ -1891,6 +1891,13 @@
       "when": 1789987200008,
       "tag": "0292_account_profile_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 270,
+      "version": "7",
+      "when": 1789987200009,
+      "tag": "0293_kb_translations_italian_search",
+      "breakpoints": true
     }
   ]
 }

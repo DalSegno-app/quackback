@@ -50,6 +50,7 @@ const LOCALE_LABELS: Record<string, string> = {
   'zh-tw': '繁體中文',
   nl: 'Nederlands',
   pl: 'Polski',
+  it: 'Italiano',
 }
 
 const HOSTNAME_PATTERN =
@@ -114,6 +115,7 @@ export function localeChromeError(values: LocaleChromeValues): string | null {
     return 'The search placeholder can be up to 200 characters.'
   }
   return null
+
 }
 
 interface DomainsLanguagesTabProps {

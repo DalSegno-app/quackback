@@ -324,6 +324,7 @@ describe('the real corpus', () => {
       '0285_integration_link_scope.sql',
       '0288_kb_translations_dutch_search.sql',
       '0291_legacy_surface_switches.sql',
+      '0293_kb_translations_italian_search.sql',
     ])
   })
 

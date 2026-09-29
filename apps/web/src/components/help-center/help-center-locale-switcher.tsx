@@ -21,6 +21,7 @@ const LOCALE_LABELS: Record<string, string> = {
   'zh-tw': '繁體中文',
   nl: 'Nederlands',
   pl: 'Polski',
+  it: 'Italiano',
 }
 
 interface HelpCenterLocaleSwitcherProps {

@@ -33,7 +33,7 @@ describe('normalizeLocale', () => {
   })
   it('returns null for locales without message catalogs', () => {
     expect(normalizeLocale('ja-JP')).toBeNull()
-    expect(normalizeLocale('it')).toBeNull()
+    expect(normalizeLocale('ko')).toBeNull()
   })
   it('returns null for unsupported locale', () => {
     expect(normalizeLocale('zz')).toBeNull()
@@ -91,6 +91,12 @@ describe('normalizeLocale', () => {
     expect(normalizeLocale('pl-PL')).toBe('pl')
     expect(normalizeLocale('PL-pl')).toBe('pl')
   })
+  it('maps Italian tags to it', () => {
+    expect(normalizeLocale('it')).toBe('it')
+    expect(normalizeLocale('it-IT')).toBe('it')
+    expect(normalizeLocale('it-CH')).toBe('it')
+    expect(normalizeLocale('IT-it')).toBe('it')
+  })
 })
 
 describe('resolveLocale', () => {
@@ -133,6 +139,11 @@ describe('resolveLocale', () => {
     expect(resolveLocale('pl,de;q=0.8')).toBe('pl')
     expect(resolveLocale('en', 'pl')).toBe('pl')
   })
+  it('resolves Italian from the header', () => {
+    expect(resolveLocale('it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7')).toBe('it')
+    expect(resolveLocale('it-CH;q=0.8')).toBe('it')
+    expect(resolveLocale('en', 'it')).toBe('it')
+  })
   it('respects an explicit Chinese locale override', () => {
     expect(resolveLocale('en', 'zh-Hant')).toBe('zh-tw')
     expect(resolveLocale('en', 'zh-CN')).toBe('zh-cn')
@@ -169,6 +180,9 @@ describe('SUPPORTED_LOCALES', () => {
   })
   it('includes pl', () => {
     expect(SUPPORTED_LOCALES).toContain('pl')
+  })
+  it('includes it', () => {
+    expect(SUPPORTED_LOCALES).toContain('it')
   })
   it('DEFAULT_LOCALE is en', () => {
     expect(DEFAULT_LOCALE).toBe('en')
