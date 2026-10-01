@@ -499,13 +499,13 @@ export const InboxNavSidebar = memo(function InboxNavSidebar({
   return (
     <nav
       data-side-pane=""
-      className="hidden w-64 shrink-0 flex-col overflow-hidden border-r border-border/50 bg-card/30 lg:flex xl:w-72"
+      className="hidden w-64 shrink-0 flex-col overflow-hidden border-e border-border/50 bg-card/30 lg:flex xl:w-72"
     >
-      <div className="px-4 py-3.5">
+      <div className="px-5 py-3.5">
         <PageHeader as="h2" title="Support" />
       </div>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="px-5 pb-5">
+        <div className="px-2.5 pb-5">
           <FilterSection title="Conversations">
             <div className="space-y-1">
               {CONVERSATION_VIEWS.map(({ view, label, Icon }) => {
