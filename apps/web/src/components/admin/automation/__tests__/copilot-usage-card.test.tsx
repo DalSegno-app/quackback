@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 /**
- * Smoke coverage for the Copilot usage card: the MetricTile headline row,
+ * Smoke coverage for the Copilot usage card: the analytics stat row,
  * the Outcomes section (insert rate, inserted breakdown, feedback split),
  * the per-teammate leaderboard, the per-kind transform breakdown, and the
  * actions funnel from getCopilotUsageMetricsFn (mocked) — funnel and
@@ -11,6 +11,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import type { ReactElement } from 'react'
 import { render, screen, within, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { IntlProvider } from 'react-intl'
 
 const METRICS = {
   totalQuestions: 42,
@@ -75,7 +76,11 @@ const RANGE = { from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T00:00:00.000Z'
 
 function renderWithClient(ui: ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+  return render(
+    <IntlProvider locale="en" messages={{}} onError={() => {}}>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </IntlProvider>
+  )
 }
 
 describe('CopilotUsageCard', () => {
@@ -176,7 +181,7 @@ describe('CopilotUsageCard', () => {
     expect(within(secondRow).getByText('4')).toBeInTheDocument()
     // A source with no in-range insert (or none logged before the field
     // existed) shows the placeholder, never a misleading 0%.
-    expect(within(secondRow).getByText('—')).toBeInTheDocument()
+    expect(within(secondRow).getByText('No data')).toBeInTheDocument()
 
     // Ranked by question volume: the higher-volume article leads.
     const rows = within(table).getAllByRole('row')
@@ -214,8 +219,8 @@ describe('CopilotUsageCard', () => {
     hoisted.getCopilotUsageMetricsFn.mockResolvedValue(METRICS)
     renderWithClient(<CopilotUsageCard showActionsFunnel range={RANGE} />)
 
-    // Headline tiles render the placeholder dash while the query is pending.
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    // Headline tiles render the No data placeholder while the query is pending.
+    expect(screen.getAllByText('No data').length).toBeGreaterThan(0)
   })
 
   it('shows an empty state when there are no Copilot questions for the period', async () => {

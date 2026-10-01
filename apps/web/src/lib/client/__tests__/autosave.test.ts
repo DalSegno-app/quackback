@@ -5,7 +5,8 @@ import { MutationCache, QueryClient } from '@tanstack/react-query'
 const toastError = vi.hoisted(() => vi.fn())
 vi.mock('sonner', () => ({ toast: { error: toastError } }))
 
-const { AUTOSAVE, createAutosaveMutationCache } = await import('../autosave')
+const { AUTOSAVE, createAutosaveMutationCache, isRevisionConflict } = await import('../autosave')
+const { ASSISTANT_REVISION_CONFLICT_MESSAGE } = await import('@/lib/shared/assistant/config')
 
 afterEach(() => toastError.mockClear())
 
@@ -56,6 +57,59 @@ describe('autosave mutation errors', () => {
       .build(client, { meta: AUTOSAVE, mutationFn: async () => 'ok' })
     await mutation.execute(undefined)
     expect(toastError).not.toHaveBeenCalled()
+  })
+})
+
+describe('revision conflict detection', () => {
+  // A failing server function reaches the client as a plain Error that carries
+  // only the server's message; the typed error and its status do not survive.
+  const serverMessage = new Error(ASSISTANT_REVISION_CONFLICT_MESSAGE)
+
+  it('recognises the error as it arrives through the server function boundary', () => {
+    expect(isRevisionConflict(serverMessage)).toBe(true)
+  })
+
+  it('also recognises the typed shapes', () => {
+    expect(isRevisionConflict(Object.assign(new Error('x'), { statusCode: 409 }))).toBe(true)
+    expect(
+      isRevisionConflict(
+        Object.assign(new Error('x'), { code: 'ASSISTANT_CONFIG_REVISION_CONFLICT' })
+      )
+    ).toBe(true)
+  })
+
+  it('does not treat other failures as conflicts', () => {
+    expect(isRevisionConflict(new Error('boom'))).toBe(false)
+    expect(isRevisionConflict(new Error('Use 80 characters or fewer.'))).toBe(false)
+    expect(isRevisionConflict(null)).toBe(false)
+    expect(isRevisionConflict('changed in another session')).toBe(false)
+  })
+
+  it('leaves a conflict to the page when the mutation owns it, and toasts other failures', async () => {
+    const client = clientWithHandler()
+    const owned = client.getMutationCache().build(client, {
+      meta: { ...AUTOSAVE, ownsError: isRevisionConflict },
+      mutationFn: async () => Promise.reject(serverMessage),
+    })
+    await expect(owned.execute(undefined)).rejects.toThrow('changed in another session')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(toastError).not.toHaveBeenCalled()
+    const other = client.getMutationCache().build(client, {
+      meta: { ...AUTOSAVE, ownsError: isRevisionConflict },
+      mutationFn: async () => Promise.reject(new Error('nope')),
+    })
+    await expect(other.execute(undefined)).rejects.toThrow('nope')
+    await vi.waitFor(() => expect(toastError).toHaveBeenCalledTimes(1))
+  })
+
+  it('toasts a conflict when the mutation does not own it', async () => {
+    const client = clientWithHandler()
+    const mutation = client.getMutationCache().build(client, {
+      meta: AUTOSAVE,
+      mutationFn: async () => Promise.reject(serverMessage),
+    })
+    await expect(mutation.execute(undefined)).rejects.toThrow()
+    await vi.waitFor(() => expect(toastError).toHaveBeenCalledTimes(1))
   })
 })
 

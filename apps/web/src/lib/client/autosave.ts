@@ -16,7 +16,10 @@ declare module '@tanstack/react-query' {
        * instead of asking them to try again.
        */
       showServerMessage?: boolean
-      /** True for an error the page reports itself (an upgrade prompt, a conflict notice). */
+      /**
+       * True for an error the page reports itself (an upgrade prompt, a
+       * revision conflict notice).
+       */
       ownsError?: (error: unknown) => boolean
     }
   }
@@ -27,6 +30,23 @@ function toastMessage(error: unknown, showServerMessage: boolean | undefined): s
     return `Couldn't save. ${error.message.trim()}`
   }
   return "Couldn't save. Try again."
+}
+
+/**
+ * True when a save was rejected because the settings changed in another
+ * session (an optimistic-revision mismatch). A server function failure reaches
+ * the client as a plain Error carrying only the server's message, so the
+ * message is the signal that survives; the typed fields cover other callers.
+ */
+export function isRevisionConflict(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const value = error as { code?: unknown; statusCode?: unknown; message?: unknown }
+  return (
+    value.code === 'ASSISTANT_CONFIG_REVISION_CONFLICT' ||
+    value.statusCode === 409 ||
+    (typeof value.message === 'string' &&
+      /changed in another session|revision conflict/i.test(value.message))
+  )
 }
 
 /**
