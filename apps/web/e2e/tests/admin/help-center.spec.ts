@@ -374,20 +374,17 @@ test.describe('Help Center article filtering', () => {
   })
 
   test('sort dropdown is present', async ({ page }) => {
-    const sortTrigger = page.getByRole('combobox').filter({ hasText: /newest|oldest/i })
+    const sortTrigger = page.getByRole('button', { name: /^sort: (newest|oldest)/i })
     await expect(sortTrigger.first()).toBeVisible({ timeout: 10000 })
   })
 
   test('can change sort order', async ({ page }) => {
-    const sortTrigger = page.getByRole('combobox').filter({ hasText: /newest|oldest/i })
-    if ((await sortTrigger.count()) === 0) return
+    const sortTrigger = page.getByRole('button', { name: /^sort: (newest|oldest)/i })
+    await expect(sortTrigger.first()).toBeVisible({ timeout: 10000 })
 
     await sortTrigger.first().click()
-    const oldestOption = page.getByRole('option', { name: /oldest/i })
-    if ((await oldestOption.count()) > 0) {
-      await oldestOption.click()
-      await page.waitForLoadState('networkidle')
-    }
+    await page.getByRole('menuitemradio', { name: /oldest/i }).click()
+    await expect(page.getByRole('button', { name: /^sort: oldest/i }).first()).toBeVisible()
   })
 })
 

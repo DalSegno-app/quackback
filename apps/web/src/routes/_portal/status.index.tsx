@@ -4,7 +4,7 @@ import { useSuspenseQuery, useInfiniteQuery } from '@tanstack/react-query'
 import { useIntl, FormattedMessage } from 'react-intl'
 import { RssIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui/button'
-import { PageHeader } from '@/components/shared/page-header'
+import { PortalPageHeader } from '@/components/public/portal-page-header'
 import { publicStatusPageQueries, publicStatusHistoryQueries } from '@/lib/client/queries/status'
 import { setPublicDocumentCacheHeaders } from '@/lib/server/functions/public-cache'
 import {
@@ -124,7 +124,7 @@ function StatusPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <PageHeader
+      <PortalPageHeader
         size="large"
         title={intl.formatMessage({ id: 'portal.status.title', defaultMessage: 'Status' })}
         description={

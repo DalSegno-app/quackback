@@ -125,10 +125,6 @@
   letter-spacing: -0.02em;
 }
 
-[data-visual-theme='refined'] [data-page-header-icon] {
-  display: none;
-}
-
 /* Admin shell: one charcoal field. No inset rounded canvas. */
 [data-visual-theme='refined'] [data-admin-shell] {
   padding: 0;
@@ -364,6 +360,12 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--foreground);
+}
+
+/* A setting row's label is the standard 14px medium, not the form-field label style above. */
+[data-visual-theme='refined'] [data-settings-page] [data-slot='setting-row'] [data-slot='label'] {
+  font-size: 14px;
+  font-weight: 500;
 }
 
 [data-visual-theme='refined'] [data-settings-page] p.text-xs,
