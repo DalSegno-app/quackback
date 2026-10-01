@@ -41,9 +41,14 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('@tanstack/react-query', () => ({
   useMutation: () => ({ mutate: vi.fn() }),
-  useQuery: ({ queryKey }: { queryKey?: unknown[] }) => {
+  useQuery: ({ queryKey, enabled }: { queryKey?: unknown[]; enabled?: boolean }) => {
     if (Array.isArray(queryKey) && queryKey.includes('owner-workspaces')) {
       return { data: mockBillingEnabled.current ? mockSiblings.current : undefined }
+    }
+    if (Array.isArray(queryKey) && queryKey.includes('moderationStatus')) {
+      moderationQueryEnabled.current = enabled !== false
+      if (enabled === false) return { data: undefined }
+      return { data: { enabled: true, pendingCount: mockPending.current } }
     }
     return { data: undefined }
   },
@@ -57,7 +62,9 @@ vi.mock('@/components/notifications', () => ({ NotificationBell: () => null }))
 
 vi.mock('@/lib/server/functions/conversation', () => ({ setAgentAvailabilityFn: vi.fn() }))
 
-const { mockSiblings, mockBillingEnabled } = vi.hoisted(() => ({
+const { mockSiblings, mockBillingEnabled, mockPending, moderationQueryEnabled } = vi.hoisted(() => ({
+  mockPending: { current: 0 },
+  moderationQueryEnabled: { current: null as boolean | null },
   mockSiblings: {
     current: [] as Array<{ instanceId: string; displayName: string; url: string | null }>,
   },
@@ -69,13 +76,22 @@ vi.mock('@/lib/server/functions/owner-workspaces', () => ({
   openOwnerWorkspaceFn: vi.fn(),
 }))
 
-import { AdminSidebar } from '../admin-sidebar'
+import { AdminSidebar, buildRailItems } from '../admin-sidebar'
+import { DEFAULT_FEATURE_FLAGS } from '@/lib/shared/types/settings'
 
-function renderSidebar(userRole: 'admin' | 'member') {
+function renderSidebar(
+  userRole: 'admin' | 'member',
+  opts: { flags?: Record<string, boolean>; visualTheme?: 'refined'; name?: string } = {}
+) {
   mockRole.current = userRole
   mockGetRouteContext.mockReturnValue({
     session: { user: { name: 'Test', email: 'test@example.com', image: null } },
-    settings: { featureFlags: {} },
+    settings: {
+      featureFlags: opts.flags ?? {},
+      visualTheme: opts.visualTheme,
+      brandingData: opts.name ? { name: opts.name } : undefined,
+    },
+    visualTheme: opts.visualTheme,
     userRole,
     billingEnabled: mockBillingEnabled.current,
   })
@@ -132,6 +148,44 @@ describe('AdminSidebar — workspace switcher', () => {
     renderSidebar('admin')
     expect(screen.getByRole('button', { name: 'Switch workspace' })).toBeTruthy()
     expect(screen.queryByText(/ws-4a048e07941c5e7840e986c0/)).toBeNull()
+  })
+})
+
+const ALL_ON = {
+  ...DEFAULT_FEATURE_FLAGS,
+  feedback: true,
+  supportInbox: true,
+  changelog: true,
+  helpCenter: true,
+  statusPage: true,
+}
+
+describe('buildRailItems', () => {
+  it('orders Home, Feedback, Roadmap, Changelog, Support, Help Center, Status, Analytics, AI & Automation, Users', () => {
+    const items = buildRailItems(ALL_ON, true)
+    expect(items.map((i) => [i.label, i.href])).toEqual([
+      ['Home', '/admin'],
+      ['Feedback', '/admin/feedback'],
+      ['Roadmap', '/admin/roadmap'],
+      ['Changelog', '/admin/changelog'],
+      ['Support', '/admin/inbox'],
+      ['Help Center', '/admin/help-center'],
+      ['Status', '/admin/status'],
+      ['Analytics', '/admin/analytics'],
+      ['AI & Automation', '/admin/automation'],
+      ['Users', '/admin/users'],
+    ])
+  })
+
+  it('keeps Home when every product is off, and gates AI & Automation on permission', () => {
+    const items = buildRailItems({}, false)
+    expect(items.map((i) => i.label)).toEqual(['Home', 'Analytics', 'Users'])
+  })
+
+  it('matches Home on its own path only', () => {
+    const items = buildRailItems(ALL_ON, true)
+    expect(items.find((i) => i.label === 'Home')!.exact).toBe(true)
+    expect(items.filter((i) => i.exact).length).toBe(1)
   })
 })
 
@@ -207,15 +261,93 @@ describe('AdminSidebar — refined labeled rail', () => {
 describe('AdminSidebar — AI & Automation visibility', () => {
   afterEach(() => cleanup())
 
-  it('shows AI & Automation to admins, linking to the agent page', () => {
+  it('shows AI & Automation to admins, linking to the area index', () => {
     const { container } = renderSidebar('admin')
-    expect(container.querySelectorAll('a[href="/admin/automation/agent"]').length).toBeGreaterThan(
-      0
-    )
+    expect(container.querySelectorAll('a[href="/admin/automation"]').length).toBeGreaterThan(0)
   })
 
   it('hides AI & Automation from non-admin team members', () => {
     const { container } = renderSidebar('member')
-    expect(container.querySelectorAll('a[href="/admin/automation/agent"]').length).toBe(0)
+    expect(container.querySelectorAll('a[href="/admin/automation"]').length).toBe(0)
+  })
+})
+
+describe('AdminSidebar — rail', () => {
+  afterEach(() => {
+    mockPending.current = 0
+    cleanup()
+  })
+
+  it('has a Home item pointing at /admin in both themes', () => {
+    const legacy = renderSidebar('admin', { flags: ALL_ON })
+    expect(legacy.container.querySelector('aside nav a[href="/admin"]')).toBeTruthy()
+    cleanup()
+    const refined = renderSidebar('admin', { flags: ALL_ON, visualTheme: 'refined' })
+    expect(refined.container.querySelector('aside nav a[href="/admin"]')?.textContent).toContain(
+      'Home'
+    )
+  })
+
+  it('links AI & Automation to the area index', () => {
+    const { container } = renderSidebar('admin', { flags: ALL_ON })
+    expect(container.querySelector('aside a[href="/admin/automation"]')).toBeTruthy()
+    expect(container.querySelector('aside a[href="/admin/automation/agent"]')).toBeNull()
+  })
+
+  it('shows the pending moderation count on Feedback only when above zero', () => {
+    mockPending.current = 3
+    const withCount = renderSidebar('admin', { flags: ALL_ON, visualTheme: 'refined' })
+    const feedback = withCount.container.querySelector('aside nav a[href="/admin/feedback"]')!
+    expect(feedback.textContent).toContain('3')
+    expect(feedback.textContent).toContain('3 waiting for review')
+    expect(
+      withCount.container.querySelector('aside nav a[href="/admin/roadmap"]')!.textContent
+    ).not.toMatch(/\d/)
+    cleanup()
+    mockPending.current = 0
+    const none = renderSidebar('admin', { flags: ALL_ON, visualTheme: 'refined' })
+    expect(none.container.querySelector('aside nav a[href="/admin/feedback"]')!.textContent).toBe(
+      'Feedback'
+    )
+  })
+
+  it('asks for the pending moderation count only with the post.approve permission', () => {
+    mockPending.current = 3
+    moderationQueryEnabled.current = null
+    const member = renderSidebar('member', { flags: ALL_ON, visualTheme: 'refined' })
+    expect(moderationQueryEnabled.current).toBe(false)
+    expect(member.container.querySelector('aside nav a[href="/admin/feedback"]')!.textContent).toBe(
+      'Feedback'
+    )
+    cleanup()
+    renderSidebar('admin', { flags: ALL_ON, visualTheme: 'refined' })
+    expect(moderationQueryEnabled.current).toBe(true)
+  })
+
+  it('uses solid icons for Status in both themes', () => {
+    for (const visualTheme of [undefined, 'refined'] as const) {
+      const { container } = renderSidebar('admin', { flags: ALL_ON, visualTheme })
+      const svg = container.querySelector('aside nav a[href="/admin/status"] svg')!
+      expect(svg.getAttribute('fill')).toBe('currentColor')
+      cleanup()
+    }
+  })
+
+  it('titles the mobile menu with the workspace name', async () => {
+    const { fireEvent } = await import('@testing-library/react')
+    renderSidebar('admin', { flags: ALL_ON, name: 'Acme Feedback' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
+    const title = await screen.findByRole('dialog')
+    expect(title.textContent).toContain('Acme Feedback')
+    expect(title.textContent).not.toContain('Quackback')
+  })
+
+  it('lists Home first in the mobile menu', async () => {
+    const { fireEvent } = await import('@testing-library/react')
+    renderSidebar('admin', { flags: ALL_ON })
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
+    const dialog = await screen.findByRole('dialog')
+    const links = [...dialog.querySelectorAll('nav a')].map((a) => a.getAttribute('href'))
+    expect(links.slice(0, 3)).toEqual(['/admin', '/admin/feedback', '/admin/roadmap'])
   })
 })
