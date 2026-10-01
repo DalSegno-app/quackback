@@ -1,25 +1,44 @@
 import { useState } from 'react'
 import { useIntl } from 'react-intl'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { AUTOSAVE } from '@/lib/client/autosave'
+import { updateFeatureFlagsFn } from '@/lib/server/functions/feature-flags'
 import { PauseIcon, PlayIcon } from '@heroicons/react/24/solid'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { useUpdateWidgetAssistantDeployment } from '@/lib/client/mutations/assistant'
+import { useHasPermission } from '@/lib/client/use-permissions'
+import { PERMISSIONS } from '@/lib/shared/permissions'
 
 export interface WidgetAssistantDeployment {
   enabled: boolean
   respond: boolean
 }
 
-/** The quiet line under the Agent title: where it replies, or why it does not. */
-export function useAgentStatusLine(deployment: WidgetAssistantDeployment, available = true) {
+/**
+ * The quiet line under the Agent title: where it replies, or why it does not.
+ * The Agent answers in Messenger, which needs the Support inbox, so `available`
+ * is the inbox flag. `ticketsOn` tells a tickets-only workspace apart from one
+ * with Support off, because its Support switch already reads on.
+ */
+export function useAgentStatusLine(
+  deployment: WidgetAssistantDeployment,
+  available = true,
+  ticketsOn = false
+) {
   const intl = useIntl()
   if (!available) {
-    return intl.formatMessage({
-      id: 'automation.agent.deployment.unavailable',
-      defaultMessage:
-        'Turn on Support in Settings → General to use automatic replies in Messenger.',
-    })
+    return ticketsOn
+      ? intl.formatMessage({
+          id: 'automation.agent.deployment.unavailableTickets',
+          defaultMessage: 'Messenger replies need the Support inbox.',
+        })
+      : intl.formatMessage({
+          id: 'automation.agent.deployment.unavailable',
+          defaultMessage:
+            'Turn on Support in Settings → General to use automatic replies in Messenger.',
+        })
   }
   return deployment.enabled && deployment.respond
     ? intl.formatMessage({
@@ -36,13 +55,29 @@ export function useAgentStatusLine(deployment: WidgetAssistantDeployment, availa
 export function AgentPauseControl({
   deployment,
   available = true,
+  ticketsOn = false,
   onChange,
 }: {
   deployment: WidgetAssistantDeployment
   available?: boolean
+  /** Tickets are on without the inbox: the action turns the inbox on. */
+  ticketsOn?: boolean
   onChange: (deployment: WidgetAssistantDeployment) => void
 }) {
   const intl = useIntl()
+  const canOpenGeneral = useHasPermission(PERMISSIONS.SETTINGS_MANAGE)
+  const queryClient = useQueryClient()
+  const router = useRouter()
+  const turnOnInbox = useMutation({
+    meta: AUTOSAVE,
+    mutationFn: () => updateFeatureFlagsFn({ data: { supportInbox: true } }),
+    onSuccess: () => {
+      // The flags live in the root route context; invalidating re-runs it so the
+      // page, rail and settings nav reflect the inbox.
+      void router.invalidate()
+      void queryClient.invalidateQueries({ queryKey: ['settings', 'portalConfig'] })
+    },
+  })
   const updateDeployment = useUpdateWidgetAssistantDeployment()
   const [confirmingEnabled, setConfirmingEnabled] = useState<boolean | null>(null)
   const live = deployment.enabled && deployment.respond
@@ -63,6 +98,24 @@ export function AgentPauseControl({
   }
 
   if (!available) {
+    // General needs settings.manage; anyone else would only be sent to sign in.
+    if (!canOpenGeneral) return null
+    if (ticketsOn) {
+      return (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={turnOnInbox.isPending}
+          onClick={() => turnOnInbox.mutate()}
+        >
+          {intl.formatMessage({
+            id: 'automation.agent.deployment.turnOnInbox',
+            defaultMessage: 'Turn on inbox',
+          })}
+        </Button>
+      )
+    }
     return (
       <Button type="button" variant="outline" size="sm" asChild>
         <Link to="/admin/settings/general">

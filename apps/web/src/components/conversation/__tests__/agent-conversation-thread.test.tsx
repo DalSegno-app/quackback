@@ -612,17 +612,14 @@ describe('AgentConversationThread — conversation kind unaffected', () => {
   })
 })
 
-describe('AgentConversationThread — details toggle below the inline panel width', () => {
+describe('AgentConversationThread: details toggle below the inline panel width', () => {
   it('offers a Details button that opens the details content in a sheet', async () => {
     renderThread({ kind: 'conversation', id: 'conversation_1' }, { detailPanelShown: false })
     const toggle = await screen.findByRole('button', { name: 'Details' })
     expect(screen.queryByRole('dialog')).toBeNull()
     fireEvent.click(toggle)
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByTestId('inbox-detail-panel')).toHaveAttribute(
-      'data-visible',
-      'true'
-    )
+    expect(within(dialog).getByTestId('inbox-detail-panel')).toHaveAttribute('data-visible', 'true')
     fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })

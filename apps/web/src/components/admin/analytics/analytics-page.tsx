@@ -1,7 +1,8 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { isProductEnabled, type FeatureFlags } from '@/lib/shared/types/settings'
-import { analyticsQueries, type AnalyticsPeriod } from '@/lib/client/queries/analytics'
+import { analyticsQueries, periodRange, type AnalyticsPeriod } from '@/lib/client/queries/analytics'
 import { formatDistanceToNow } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,12 +20,14 @@ import { MENU_ICON, MENU_ROW } from '@/components/ui/menu'
 import { cn } from '@/lib/shared/utils'
 import { FunnelIcon, CalendarDaysIcon } from '@heroicons/react/24/solid'
 import { CHART_HEIGHT_CLASS, channelLabel, formatResponseTime } from './analytics-constants'
-import { SECTION_NAV_ITEMS, type Section } from './analytics-sections'
+import { SECTION_NAV_ITEMS, parseSection, type Section } from './analytics-sections'
 import { AnalyticsSectionSelect } from './analytics-section-select'
 import { AnalyticsSummaryCards, type MetricKey } from './analytics-summary-cards'
 import { AnalyticsVisitorCards, type VisitorMetricKey } from './analytics-visitor-cards'
 import { AnalyticsVisitorPanels } from './analytics-visitor-panels'
 import { AnalyticsStatRow, type AnalyticsStatProps } from './analytics-stat-row'
+import { AnalyticsQuinnSection } from './analytics-quinn-section'
+import { AnalyticsSlaCards } from './analytics-sla-cards'
 import { AnalyticsEmpty } from './analytics-empty'
 import { AnalyticsBoardChart } from './analytics-board-chart'
 import { AnalyticsChangelogCard } from './analytics-changelog-card'
@@ -76,44 +79,6 @@ function StatSection({ stats, children }: { stats: AnalyticsStatProps[]; childre
   )
 }
 
-/** Quinn's outcome split (Resolved / Escalated / Pending) as a proportional bar. */
-function AiOutcomeBreakdown({
-  ai,
-}: {
-  ai: { resolved: number; escalated: number; pending: number }
-}) {
-  const items = [
-    { label: 'Resolved', value: ai.resolved, className: 'bg-emerald-500' },
-    { label: 'Escalated', value: ai.escalated, className: 'bg-amber-500' },
-    { label: 'Pending', value: ai.pending, className: 'bg-primary' },
-  ]
-  const total = items.reduce((sum, i) => sum + i.value, 0) || 1
-  return (
-    <div className="space-y-3">
-      <div className="flex h-2 overflow-hidden rounded-full bg-muted">
-        {items.map((i) => (
-          <div
-            key={i.label}
-            className={i.className}
-            style={{ width: `${(i.value / total) * 100}%` }}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-        {items.map((i) => (
-          <div key={i.label} className="flex items-center gap-1.5 text-xs">
-            <span className={cn('h-2 w-2 rounded-full', i.className)} />
-            <span className="text-muted-foreground">{i.label}</span>
-            <span className="font-medium tabular-nums text-foreground">
-              {i.value.toLocaleString()}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 /** Integer average, guarding divide-by-zero, with thousands separators. */
 function avgPerItem(total: number, count: number): string {
   return count > 0 ? Math.round(total / count).toLocaleString() : '0'
@@ -157,7 +122,18 @@ export function AnalyticsPage() {
   )
 
   const [period, setPeriod] = useState<AnalyticsPeriod>('30d')
-  const [section, setSection] = useState<Section>('overview')
+  // The section is part of the URL; one the workspace has switched off opens the overview.
+  const search = useSearch({ strict: false }) as { section?: string }
+  const navigate = useNavigate()
+  const requested = parseSection(search.section)
+  const section: Section = sections.some((i) => i.key === requested) ? requested : 'overview'
+  const setSection = (next: Section) =>
+    void navigate({
+      to: '/admin/analytics',
+      search: (prev: Record<string, unknown>) => ({ ...prev, section: next }),
+    })
+  // The windows the Quinn and SLA cards read: fixed per period so their query keys stay stable.
+  const range = useMemo(() => periodRange(period), [period])
   const [activeMetric, setActiveMetric] = useState<MetricKey>('posts')
   const [visitorMetric, setVisitorMetric] = useState<VisitorMetricKey>('visitors')
   const [surface, setSurface] = useState<'all' | 'portal' | 'widget'>('all')
@@ -276,7 +252,12 @@ export function AnalyticsPage() {
               </div>
             </div>
 
-            {isLoading ? (
+            {section === 'ai' ? (
+              <AnalyticsQuinnSection
+                range={range}
+                periodLabel={periods.find((p) => p.value === period)?.label ?? ''}
+              />
+            ) : isLoading ? (
               <SectionSkeleton section={section} />
             ) : !data ? null : (
               <>
@@ -473,35 +454,9 @@ export function AnalyticsPage() {
                         <AnalyticsCsatDistribution distribution={data.csat.distribution} />
                       </StatSection>
                     )}
+                    <AnalyticsSlaCards range={range} />
                   </div>
                 )}
-
-                {section === 'ai' &&
-                  (data.ai.involved === 0 ? (
-                    <Card className="overflow-hidden">
-                      <AnalyticsEmpty message="Quinn hasn't handled any conversations this period" />
-                    </Card>
-                  ) : (
-                    <StatSection
-                      stats={[
-                        {
-                          label: 'Conversations',
-                          value: data.ai.involved.toLocaleString(),
-                          caption: 'Quinn engaged',
-                        },
-                        { label: 'Resolution rate', value: `${data.ai.resolutionRate}%` },
-                        { label: 'Escalation rate', value: `${data.ai.escalationRate}%` },
-                        {
-                          label: 'AI CSAT',
-                          value:
-                            data.ai.ratingCount > 0 ? (data.ai.avgRating ?? 0).toFixed(1) : '-',
-                          suffix: data.ai.ratingCount > 0 ? '/ 5' : undefined,
-                        },
-                      ]}
-                    >
-                      <AiOutcomeBreakdown ai={data.ai} />
-                    </StatSection>
-                  ))}
 
                 {section === 'changelog' && (
                   <StatSection

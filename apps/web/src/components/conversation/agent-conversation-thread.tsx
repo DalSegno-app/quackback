@@ -2096,9 +2096,7 @@ export function AgentConversationThread({
         </div>
         {/* Narrow-viewport fallback: Properties live in the detail panel at
             1680px+; below that, priority/assignee stay reachable here. */}
-        {!detailPanelShown && (
-          <TicketTriageFallback ticket={ticket} onChanged={onChanged} />
-        )}
+        {!detailPanelShown && <TicketTriageFallback ticket={ticket} onChanged={onChanged} />}
         {headerActions}
       </div>
     ) : (
@@ -2156,8 +2154,8 @@ export function AgentConversationThread({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {header}
 
-        {/* Conversation labels — 1680px+ shows them in the detail panel. Tickets
-            have no tags surface (§2.5's capability matrix — "tags,
+        {/* Conversation labels: 1680px+ shows them in the detail panel. Tickets
+            have no tags surface (§2.5's capability matrix: "tags,
             conversations only"). */}
         {!isTicket && conversation && conversationId && !detailPanelShown && (
           <ThreadTagsFallback conversationId={conversationId} tags={conversation.tags} />
