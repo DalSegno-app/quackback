@@ -58,7 +58,9 @@ describe('SettingsListRow', () => {
   it('a row with `to` is a whole-row link with a chevron and no menu', () => {
     render(
       <SettingsList>
-        <SettingsListRow title="Email" to="/admin/settings/email"
+        <SettingsListRow
+          title="Email"
+          to="/admin/settings/email"
           actions={[{ label: 'Edit', onSelect: () => {} }]}
         />
       </SettingsList>
@@ -187,6 +189,21 @@ describe('RowActions', () => {
     await user.click(screen.getByRole('button', { name: 'Actions for Bug' }))
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }))
     expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('shows the reason under a disabled item', async () => {
+    const user = userEvent.setup()
+    render(
+      <RowActions
+        label="Bug"
+        items={[{ label: 'Delete', onSelect: () => {}, disabled: true, hint: 'Keep one status' }]}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'Actions for Bug' }))
+    expect(screen.getByRole('menuitem', { name: /Delete/ }).getAttribute('aria-disabled')).toBe(
+      'true'
+    )
+    expect(screen.getByText('Keep one status')).toBeTruthy()
   })
 
   it('a row with actions renders the menu trigger', () => {

@@ -29,8 +29,7 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/solid'
 import { Checkbox } from '@/components/ui/checkbox'
-import { BoardSettingsSaveDock } from './board-settings-save-dock'
-import { FormError } from '@/components/shared/form-error'
+import { useDebouncedSave } from '@/lib/client/hooks/use-debounced-save'
 import { useUpdateBoardAccess } from '@/lib/client/mutations'
 import { useSegments } from '@/lib/client/hooks/use-segments-queries'
 import { settingsQueries } from '@/lib/client/queries/settings'
@@ -202,6 +201,8 @@ function deriveActivePreset(values: FormShape): PresetName {
   return 'custom'
 }
 
+const AUTOSAVE_DELAY_MS = 400
+
 // ─── Main form ────────────────────────────────────────────────────────
 
 export function BoardAccessForm({ board }: BoardAccessFormProps) {
@@ -231,33 +232,47 @@ export function BoardAccessForm({ board }: BoardAccessFormProps) {
 
   const [openPicker, setOpenPicker] = useState<ActionId | null>(null)
 
-  // Sync form state when the server-side board.access changes (e.g. after a
-  // successful save invalidates the boards query).
-  const accessKey = JSON.stringify(board.access)
-  useEffect(() => {
-    const next = board.access ?? DEFAULT_BOARD_ACCESS
+  // Changes are sent once, after a short pause. The form re-baselines on the
+  // value it sends, so undoing an edit after it was sent counts as a new edit.
+  const { queue, cancel, hasPending } = useDebouncedSave<FormShape>((next) => {
+    mutation.mutate({ boardId: board.id, access: next })
     form.reset(next)
-    setOpenPicker(null)
-  }, [accessKey, board.access, form])
+  }, AUTOSAVE_DELAY_MS)
 
-  const values = form.watch()
-
-  // Auto-bump: when the workspace `allowAnonymous` master switch flips
-  // off, any of vote/comment/submit currently set to 'anonymous' gets
-  // bumped to 'authenticated' together. The bumped form is dirty so the
-  // user sees the save dock and can confirm or discard. We read the
-  // current tier via `form.getValues()` so the effect doesn't have to
-  // depend on `values` (which would re-fire on every keystroke / cell
-  // click).
-  useEffect(() => {
+  // Workspace ceiling: when `allowAnonymous` is off, vote/comment/submit cannot
+  // sit on 'anonymous', so the form shows them as 'authenticated'. The shown
+  // value is not marked dirty: opening the page saves nothing, and the next
+  // edit carries the bumped values with it. `form.getValues()` is read so the
+  // callback does not depend on `values`.
+  const applyCeiling = useCallback(() => {
     if (wsAllowAnonymous) return
     ANON_CEILING_ACTIONS.forEach((id) => {
       if (form.getValues(id) === 'anonymous') {
-        form.setValue(id, 'authenticated', { shouldDirty: true })
-        form.setValue(`segments.${id}`, [], { shouldDirty: true })
+        form.setValue(id, 'authenticated')
+        form.setValue(`segments.${id}`, [])
       }
     })
   }, [wsAllowAnonymous, form])
+
+  // Sync form state when the server-side board.access changes (e.g. after a
+  // successful save invalidates the boards query). A refetch never replaces
+  // edits that are unsaved, queued or in flight.
+  const accessKey = JSON.stringify(board.access)
+  const saving = mutation.isPending
+  useEffect(() => {
+    const next = board.access ?? DEFAULT_BOARD_ACCESS
+    const matches = JSON.stringify(form.getValues()) === JSON.stringify(next)
+    if (!matches && (form.formState.isDirty || hasPending() || saving)) return
+    form.reset(next)
+    applyCeiling()
+    setOpenPicker(null)
+  }, [accessKey, board.access, form, saving, hasPending, applyCeiling])
+
+  useEffect(() => {
+    applyCeiling()
+  }, [applyCeiling])
+
+  const values = form.watch()
 
   const activePreset = useMemo(() => deriveActivePreset(values), [values])
 
@@ -290,9 +305,8 @@ export function BoardAccessForm({ board }: BoardAccessFormProps) {
       const meta = PRESET_META.find((p) => p.id === id)
       if (!meta) return
       // Apply via setValue (not form.reset) so the change is tracked as
-      // dirty and the save bar appears. reset() re-baselines defaultValues,
-      // leaving isDirty false — which silently hides the save dock after a
-      // preset click. moderation is left untouched (owned by the Moderation
+      // dirty and autosaves. reset() re-baselines defaultValues, leaving
+      // isDirty false, so a preset click would never be saved. moderation is left untouched (owned by the Moderation
       // sub-tab); presets target the access matrix only.
       const opts = { shouldDirty: true } as const
       ACTIONS.forEach((a) => form.setValue(a.id, meta.tiers[a.id], opts))
@@ -358,24 +372,17 @@ export function BoardAccessForm({ board }: BoardAccessFormProps) {
     [form]
   )
 
-  const onSubmit = useCallback(
-    (next: FormShape) => {
-      if (segsError) return
-      mutation.mutate({ boardId: board.id, access: next })
-    },
-    [board.id, mutation, segsError]
-  )
-
-  const handleDiscard = useCallback(() => {
-    const original = board.access ?? DEFAULT_BOARD_ACCESS
-    form.reset(original)
-    setOpenPicker(null)
-  }, [board.access, form])
+  // Changes save after a short pause, once every Segments tier has a segment.
+  // Returning to the saved values leaves nothing to save, so a queued save for
+  // the undone edit is dropped.
+  const valuesKey = JSON.stringify(values)
+  useEffect(() => {
+    if (!dirty) cancel()
+    else if (!segsError) queue(form.getValues())
+  }, [valuesKey, dirty, segsError, form, queue, cancel])
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-24">
-      {mutation.isError && <FormError message={mutation.error?.message ?? 'An error occurred'} />}
-
+    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
       <div className="space-y-4">
         <p className="text-xs text-muted-foreground max-w-xl">
           Pick a preset, or tweak any cell to fine-tune. Custom is set automatically when your
@@ -439,16 +446,14 @@ export function BoardAccessForm({ board }: BoardAccessFormProps) {
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <ShieldCheckIcon className="h-3 w-3" />
-        Team members and admins always have full access — they bypass these rules.
+        Team members and admins always have full access. They bypass these rules.
       </p>
 
-      <BoardSettingsSaveDock
-        dirty={dirty}
-        error={segsError}
-        errorMessage="Some rules use Segments but no segments are selected."
-        saving={mutation.isPending}
-        onDiscard={handleDiscard}
-      />
+      {segsError && (
+        <p role="alert" className="text-xs text-destructive">
+          Some rules use Segments but no segments are selected.
+        </p>
+      )}
     </form>
   )
 }
