@@ -13,8 +13,12 @@ export interface PageCrumb {
 interface PageHeaderProps {
   title: string
   description?: string
+  /** A quiet badge beside the title, for a non-default state of the page's subject. */
+  badge?: React.ReactNode
   /** The parents of the current page, nearest to the root first. */
   crumbs?: PageCrumb[]
+  /** A small brand logo shown left of the title (integration pages). Not an icon tile. */
+  logo?: React.ReactNode
   /** Save feedback, rendered left of `actions`. */
   status?: React.ReactNode
   actions?: React.ReactNode
@@ -24,7 +28,9 @@ interface PageHeaderProps {
 export function PageHeader({
   title,
   description,
+  badge,
   crumbs,
+  logo,
   status,
   actions,
   className,
@@ -59,7 +65,15 @@ export function PageHeader({
       )}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+          {logo || badge ? (
+            <div className="flex items-center gap-2.5">
+              {logo}
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+              {badge}
+            </div>
+          ) : (
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+          )}
           {description && <p className="text-[13px] text-muted-foreground">{description}</p>}
         </div>
         {(status || actions) && (

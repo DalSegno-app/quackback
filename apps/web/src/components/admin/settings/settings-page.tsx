@@ -16,7 +16,9 @@ type PageTitle =
 
 type SettingsPageProps = PageTitle & {
   description?: string
+  badge?: ReactNode
   crumbs?: PageCrumb[]
+  logo?: ReactNode
   actions?: ReactNode
   /** `form` is a single column of settings; `wide` is for tables, card grids and live previews. */
   width?: 'form' | 'wide'
@@ -40,7 +42,9 @@ export function SettingsPage({
   page,
   title,
   description,
+  badge,
   crumbs,
+  logo,
   actions,
   width = 'form',
   area,
@@ -75,7 +79,9 @@ export function SettingsPage({
       <PageHeader
         title={resolvedTitle!}
         description={description}
+        badge={badge}
         crumbs={crumbs}
+        logo={logo}
         status={<SaveStatus />}
         actions={actions}
       />

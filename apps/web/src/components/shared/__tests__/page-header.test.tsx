@@ -33,6 +33,12 @@ describe('PageHeader', () => {
     expect(screen.queryByTestId('tile')).toBeNull()
   })
 
+  it('renders a logo left of the title and keeps it out of the heading text', () => {
+    render(<PageHeader title="Slack" logo={<svg data-testid="logo" />} />)
+    expect(screen.getByTestId('logo')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Slack' })).toBeInTheDocument()
+  })
+
   it('renders no breadcrumb row without crumbs', () => {
     render(<PageHeader title="General" />)
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull()
@@ -61,8 +67,13 @@ describe('PageHeader', () => {
     )
     const status = screen.getByText('Saved')
     const action = screen.getByRole('button', { name: 'New board' })
-    expect(
-      status.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy()
+    expect(status.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('renders a badge beside the title', () => {
+    render(<PageHeader title="Owner" badge={<span>Preset</span>} />)
+    const heading = screen.getByRole('heading', { level: 1, name: 'Owner' })
+    expect(heading.parentElement?.textContent).toContain('Preset')
+    expect(heading.textContent).toBe('Owner')
   })
 })

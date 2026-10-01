@@ -6,9 +6,6 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { settingsQueries } from '@/lib/client/queries/settings'
 import {
-  SunIcon,
-  MoonIcon,
-  ArrowPathIcon,
   ComputerDesktopIcon,
   DevicePhoneMobileIcon,
   ArrowTopRightOnSquareIcon,
@@ -27,8 +24,9 @@ import {
 } from '@/components/ui/select'
 import { RichTextEditor, type EditorDocument } from '@/components/ui/rich-text-editor'
 import { cn } from '@/lib/shared/utils'
-import { BackLink } from '@/components/ui/back-link'
-import { PageHeader } from '@/components/shared/page-header'
+import { SettingsPage } from '@/components/admin/settings/settings-page'
+import { DraftBar } from '@/components/admin/settings/draft-bar'
+import { ThemeModeTiles } from '@/components/admin/settings/branding/theme-mode-tiles'
 import { SettingsCard } from '@/components/admin/settings/settings-card'
 import { PreviewToggleButton } from '@/components/admin/settings/preview-toggle'
 import { PortalPreview } from '@/components/admin/settings/branding/portal-preview'
@@ -47,12 +45,7 @@ import {
   useBrandingState,
   FONT_OPTIONS,
 } from '@/components/admin/settings/branding/use-branding-state'
-import {
-  primaryPresetIds,
-  themePresets,
-  type ThemeConfig,
-  type ThemeMode,
-} from '@/lib/shared/theme'
+import { primaryPresetIds, themePresets, type ThemeConfig } from '@/lib/shared/theme'
 import { useUpdatePortalConfig } from '@/lib/client/mutations/settings'
 import { useImageUpload } from '@/lib/client/hooks/use-image-upload'
 import { UpgradeModal } from '@/components/admin/upgrade'
@@ -77,8 +70,8 @@ import { useSessionContext, useWorkspaceSettings } from '@/lib/client/hooks/use-
 export const Route = createFileRoute('/admin/settings/portal')({
   loader: async ({ context }) => {
     // Portal config reads/writes require settings.branding, which non-admin
-    // team roles lack — gate the page like the old Portal page did instead
-    // of letting managers land on a shell full of 403s.
+    // team roles lack. Gate the page instead of letting managers land on a
+    // shell full of 403s.
     assertRoutePermission(context.permissions, PERMISSIONS.SETTINGS_BRANDING)
 
     const { ensureBillingCatalogue } = await import('@/lib/client/queries/billing')
@@ -108,7 +101,10 @@ function PortalPage() {
   const portalConfigQuery = useSuspenseQuery(settingsQueries.portalConfig())
   const config = portalConfigQuery.data as PortalConfig
 
-  const updatePortalConfig = useUpdatePortalConfig()
+  const updatePortalConfig = useUpdatePortalConfig({
+    showServerMessage: true,
+    ownsError: isPlanRefusal,
+  })
 
   // ============================================
   // Draft state. Everything below commits through the contextual save bar;
@@ -121,7 +117,7 @@ function PortalPage() {
     baseline: settings?.visualTheme === 'refined' ? 'refined' : 'legacy',
   })
 
-  // Baselines for dirty tracking — captured once from the loaded values,
+  // Baselines for dirty tracking, captured once from the loaded values,
   // advanced after a successful save or an explicit discard.
   const themeBaseline = useRef({ css: state.cssText, mode: state.themeMode })
 
@@ -162,7 +158,7 @@ function PortalPage() {
 
   async function handleSave() {
     // Links with a typed-but-invalid URL would silently vanish from the
-    // portal nav — surface it instead of saving.
+    // portal nav, so surface it instead of saving.
     const brokenLink = navItems.find(
       (i) => i.type === 'link' && !!i.url && !isValidNavLinkUrl(i.url)
     )
@@ -188,9 +184,10 @@ function PortalPage() {
         navBaseline.current = JSON.stringify(navItems)
       }
 
-      toast.success('Portal saved')
       startTransition(() => router.invalidate())
     } catch (error) {
+      // A plan refusal opens the upgrade dialog; any other failure raises the
+      // shared "Couldn't save" toast from the autosave mutations.
       if (isPlanRefusal(error)) {
         setUpgrade(
           describePlanRefusal(
@@ -198,8 +195,6 @@ function PortalPage() {
             describePlanUpgrade('Custom colours', 'business', { plural: true })
           )
         )
-      } else {
-        toast.error(error instanceof Error ? error.message : "Couldn't save portal. Try again.")
       }
     } finally {
       setSaving(false)
@@ -218,8 +213,8 @@ function PortalPage() {
   // ============================================
   const [viewport, setViewport] = useState<'desktop' | 'mobile'>('desktop')
 
-  // Which built-in tabs are currently unavailable (product/tab off) — the
-  // editor keeps their rows but renders them inert. Mirrors portal-header.
+  // Built-in tabs that are currently unavailable (product or tab off) keep
+  // their rows in the editor but render inert. Mirrors portal-header.
   const gatedTypes = useMemo(() => {
     const flags = settings?.featureFlags
     const statusAudience = settings?.statusConfig?.audience ?? 'public'
@@ -255,42 +250,22 @@ function PortalPage() {
   )
 
   return (
-    <div className="space-y-6">
-      <div className="lg:hidden">
-        <BackLink to="/admin/settings">Settings</BackLink>
-      </div>
-      <PageHeader
-        title="Portal"
-        description="Everything visitors see on your portal — theme, navigation, and content"
-      />
-
+    <SettingsPage page="/admin/settings/portal" width="wide">
       {/* Controls left, live portal preview right (sticky). */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,460px)_minmax(0,1fr)] gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,440px)_minmax(0,1fr)] gap-6 items-start">
         <div className="space-y-4 min-w-0">
           <SettingsCard
             title="Appearance"
-            description="Theme mode, color palette, and typography — also applied to the embedded widget"
+            description="Theme, color palette and typography, also applied to the embedded widget."
           >
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Theme mode</Label>
-                <Select
-                  value={state.themeMode}
-                  onValueChange={(v) => state.setThemeMode(v as ThemeMode)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User choice (allow toggle)</SelectItem>
-                    <SelectItem value="light">Light only</SelectItem>
-                    <SelectItem value="dark">Dark only</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-[13px] font-medium">Theme mode</Label>
+                <ThemeModeTiles value={state.themeMode} onChange={state.setThemeMode} />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Preset</Label>
+                <Label className="text-[13px] font-medium">Preset</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {primaryPresetIds.map((presetId) => {
                     const preset = themePresets[presetId]
@@ -322,7 +297,7 @@ function PortalPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Font</Label>
+                <Label className="text-[13px] font-medium">Font</Label>
                 <Select
                   value={state.currentFontId}
                   onValueChange={(id) => {
@@ -331,7 +306,7 @@ function PortalPage() {
                   }}
                   onOpenChange={(open) => {
                     // Every option previews its own name in its own font, all
-                    // rendered at once — load every family the first time the
+                    // rendered at once. Load every family the first time the
                     // menu opens rather than trying to lazily match hover.
                     if (open) {
                       for (const f of FONT_OPTIONS) loadBrandingFont(f.id)
@@ -356,7 +331,7 @@ function PortalPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Corner Roundness</Label>
+                <Label className="text-[13px] font-medium">Corner roundness</Label>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground w-12">Sharp</span>
                   <Slider
@@ -381,7 +356,7 @@ function PortalPage() {
 
           <SettingsCard
             title="Navigation"
-            description="The portal's top tabs — applies everywhere the portal header shows, including help center and status pages"
+            description="The portal's top tabs. They apply to the help center and status pages too."
           >
             <PortalNavEditor
               items={navItems}
@@ -404,25 +379,20 @@ function PortalPage() {
 
         {/* ── Live portal preview ── */}
         <div className="xl:sticky xl:top-6 min-w-0 self-start">
-          <div className="mb-3 flex items-center gap-3">
-            <span className="text-sm font-medium">Live preview</span>
-            <span className="hidden sm:inline text-xs text-muted-foreground">
-              the real portal, shown as you see it
-            </span>
-            <div className="ms-auto flex items-center gap-1.5">
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="text-sm font-medium whitespace-nowrap">Live preview</span>
+            <div className="ms-auto flex flex-wrap items-center gap-1.5">
               <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
                 <PreviewToggleButton
                   active={state.previewMode === 'light'}
                   disabled={state.previewModeDisabled === 'light'}
                   onClick={() => state.setPreviewMode('light')}
-                  icon={SunIcon}
                   label="Light"
                 />
                 <PreviewToggleButton
                   active={state.previewMode === 'dark'}
                   disabled={state.previewModeDisabled === 'dark'}
                   onClick={() => state.setPreviewMode('dark')}
-                  icon={MoonIcon}
                   label="Dark"
                 />
               </div>
@@ -442,7 +412,7 @@ function PortalPage() {
                   iconOnly
                 />
               </div>
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="outline" size="sm" asChild className="whitespace-nowrap">
                 <a href="/" target="_blank" rel="noopener noreferrer">
                   Open portal
                   <ArrowTopRightOnSquareIcon className="size-3.5 ms-1.5" />
@@ -468,40 +438,7 @@ function PortalPage() {
         </div>
       </div>
 
-      {/* Contextual save bar — appears only with unsaved changes. */}
-      <div
-        role="region"
-        aria-live="polite"
-        className={cn(
-          'fixed bottom-5 left-1/2 z-40 -translate-x-1/2 transition-all duration-200',
-          isDirty
-            ? 'visible translate-y-0 opacity-100'
-            : 'invisible pointer-events-none translate-y-16 opacity-0'
-        )}
-      >
-        <div className="flex items-center gap-1.5 rounded-xl bg-foreground py-1.5 ps-4 pe-1.5 text-background shadow-xl">
-          <span className="me-2 text-[13px] text-background/75">Unsaved changes</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-background/75 hover:bg-background/10 hover:text-background"
-            onClick={handleDiscard}
-            disabled={saving}
-          >
-            Discard
-          </Button>
-          <Button size="sm" variant="secondary" onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <>
-                <ArrowPathIcon className="me-1.5 size-3.5 animate-spin" />
-                Saving…
-              </>
-            ) : (
-              'Save'
-            )}
-          </Button>
-        </div>
-      </div>
+      <DraftBar dirty={isDirty} saving={saving} onSave={handleSave} onDiscard={handleDiscard} />
       <UpgradeModal
         open={upgrade !== null}
         onOpenChange={(open) => {
@@ -509,7 +446,7 @@ function PortalPage() {
         }}
         description={upgrade ?? describePlanUpgrade('Custom colours', 'business', { plural: true })}
       />
-    </div>
+    </SettingsPage>
   )
 }
 
