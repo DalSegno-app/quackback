@@ -49,7 +49,7 @@ async function createBoardOnAccessTab(page: Page, name: string): Promise<void> {
   await expect(page.getByText('Per-action permissions')).toBeVisible({ timeout: 5000 })
   // New boards default to the Public preset; wait for the matrix to settle on it
   // (the optimistic insert can briefly show defaults before the refetch lands).
-  await expect(page.getByRole('button', { name: 'Public', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'Everyone', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
     { timeout: 10000 }
@@ -88,8 +88,8 @@ test.describe('Admin Board Management', () => {
   })
 
   test('can edit board name', async ({ page }) => {
-    await openFirstBoard(page)
-    // Find the board name input in the General Settings section (first input, not the delete confirmation)
+    // A throwaway board keeps parallel tests from saving over the same row.
+    await createBoard(page, `Rename Me ${Date.now()}`)
     const nameInput = page.getByRole('textbox', { name: 'Name', exact: true })
     await expect(nameInput).toBeVisible()
 
@@ -99,7 +99,7 @@ test.describe('Admin Board Management', () => {
 
     // The form saves when the field loses focus
     await nameInput.blur()
-    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10000 })
 
     // The saved value survives a reload
     await page.reload()
@@ -132,7 +132,7 @@ test.describe('Admin Board Management', () => {
 
     // Visibility is chosen via aria-pressed preset toggles (Public / Private);
     // the board starts Public (asserted in the create helper).
-    const privatePreset = page.getByRole('button', { name: 'Private', exact: true })
+    const privatePreset = page.getByRole('button', { name: 'Team only', exact: true })
     await expect(privatePreset).toBeVisible()
 
     // Flip to Private (a guaranteed change) and confirm it persists in-form.
@@ -225,10 +225,10 @@ test.describe('Board Access Settings', () => {
 
   test('displays the access matrix with presets and per-action permissions', async ({ page }) => {
     // Presets replace the old public/private visibility radios.
-    await expect(page.getByRole('button', { name: 'Public', exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: 'Everyone', exact: true })).toBeVisible({
       timeout: 5000,
     })
-    await expect(page.getByRole('button', { name: 'Private', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Team only', exact: true })).toBeVisible()
 
     // The per-action matrix and the team-bypass note identify the new control.
     await expect(page.getByText('Per-action permissions')).toBeVisible()
@@ -242,8 +242,8 @@ test.describe('Board Access Settings', () => {
     const name = `Access Persist ${Date.now()}`
     await createBoardOnAccessTab(page, name)
 
-    const publicPreset = page.getByRole('button', { name: 'Public', exact: true })
-    const privatePreset = page.getByRole('button', { name: 'Private', exact: true })
+    const publicPreset = page.getByRole('button', { name: 'Everyone', exact: true })
+    const privatePreset = page.getByRole('button', { name: 'Team only', exact: true })
     await expect(publicPreset).toHaveAttribute('aria-pressed', 'true')
 
     // Flip to Private and save.
@@ -290,13 +290,15 @@ test.describe('Board Deletion Flow', () => {
     await page.waitForLoadState('networkidle')
 
     await expect(page.getByRole('heading', { name: testBoardName })).toBeVisible({ timeout: 10000 })
-    const deleteButton = page.getByRole('button', { name: 'Delete board', exact: true })
+    // The danger zone button opens a confirm dialog that asks for the board name
+    await page.getByRole('button', { name: 'Delete board', exact: true }).click()
+    const confirmDialog = page.getByRole('alertdialog')
+    const deleteButton = confirmDialog.getByRole('button', { name: 'Delete board', exact: true })
     await expect(deleteButton).toBeVisible({ timeout: 5000 })
     await expect(deleteButton).toBeDisabled()
 
     // Type the board name to confirm deletion
-    const confirmInput = page.getByPlaceholder(testBoardName)
-    await confirmInput.fill(testBoardName)
+    await confirmDialog.getByPlaceholder(testBoardName).fill(testBoardName)
 
     // Now delete button should be enabled
     await expect(deleteButton).toBeEnabled()
@@ -309,36 +311,39 @@ test.describe('Board Deletion Flow', () => {
   })
 
   test('delete button stays disabled until name matches', async ({ page }) => {
-    await page.goto('/admin/settings/boards')
-    await page.waitForLoadState('networkidle')
-    await openFirstBoard(page)
+    // A throwaway board: other tests create and delete boards at the same time.
+    await createBoard(page, `Guarded Delete ${Date.now()}`)
 
-    const deleteButton = page.getByRole('button', { name: 'Delete board', exact: true })
+    await page.getByRole('button', { name: 'Delete board', exact: true }).click()
+    const confirmDialog = page.getByRole('alertdialog')
+    const deleteButton = confirmDialog.getByRole('button', { name: 'Delete board', exact: true })
     await expect(deleteButton).toBeVisible({ timeout: 5000 })
 
     // Should be disabled initially
     await expect(deleteButton).toBeDisabled()
 
     // Get the board name from the confirmation label
-    const confirmLabel = page.locator('label').filter({ hasText: 'Type' })
+    const confirmLabel = confirmDialog.locator('label').filter({ hasText: 'Type' })
     const labelText = await confirmLabel.textContent()
     const boardNameMatch = labelText?.match(/Type\s+(.+?)\s+to confirm/)
     const boardName = boardNameMatch?.[1] || ''
+    expect(boardName).not.toBe('')
 
-    if (boardName) {
-      // Type partial name - button should stay disabled
-      const confirmInput = page.getByPlaceholder(boardName)
-      await confirmInput.fill(boardName.substring(0, 3))
-      await expect(deleteButton).toBeDisabled()
+    // Type partial name - button should stay disabled
+    const confirmInput = confirmDialog.getByPlaceholder(boardName)
+    await confirmInput.fill(boardName.substring(0, 3))
+    await expect(deleteButton).toBeDisabled()
 
-      // Type wrong name - button should stay disabled
-      await confirmInput.clear()
-      await confirmInput.fill('wrong name')
-      await expect(deleteButton).toBeDisabled()
+    // Type wrong name - button should stay disabled
+    await confirmInput.clear()
+    await confirmInput.fill('wrong name')
+    await expect(deleteButton).toBeDisabled()
 
-      // Clear for cleanup
-      await confirmInput.clear()
-    }
+    // The exact name enables it, and the throwaway board is removed
+    await confirmInput.fill(boardName)
+    await expect(deleteButton).toBeEnabled()
+    await deleteButton.click()
+    await expect(page).toHaveURL(/\/admin\/settings\/boards\/?(\?|$)/, { timeout: 10000 })
   })
 })
 
@@ -366,7 +371,7 @@ test.describe('Create Board Dialog', () => {
 
     // Dialog should appear
     await expect(page.getByRole('dialog')).toBeVisible()
-    await expect(page.getByText('Create new board')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'New board' })).toBeVisible()
   })
 
   test('dialog has all required fields', async ({ page }) => {
@@ -380,8 +385,8 @@ test.describe('Create Board Dialog', () => {
     await expect(dialog.getByLabel('Description')).toBeVisible()
     // Visibility is chosen via Public/Private preset tiles (aria-pressed), which
     // replaced the old "Public board" switch.
-    await expect(dialog.getByRole('button', { name: 'Public', exact: true })).toBeVisible()
-    await expect(dialog.getByRole('button', { name: 'Private', exact: true })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Everyone', exact: true })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Team only', exact: true })).toBeVisible()
 
     // Check buttons
     await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeVisible()
@@ -448,7 +453,7 @@ test.describe('Create Board Dialog', () => {
     await dialog.getByLabel('Description').fill('Board created by Playwright test')
 
     // Public preset tile is active by default.
-    await expect(dialog.getByRole('button', { name: 'Public', exact: true })).toHaveAttribute(
+    await expect(dialog.getByRole('button', { name: 'Everyone', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
@@ -484,8 +489,8 @@ test.describe('Create Board Dialog', () => {
     await dialog.getByLabel('Description').fill('Private board for testing')
 
     // Select the Private preset (Public is active by default).
-    const publicTile = dialog.getByRole('button', { name: 'Public', exact: true })
-    const privateTile = dialog.getByRole('button', { name: 'Private', exact: true })
+    const publicTile = dialog.getByRole('button', { name: 'Everyone', exact: true })
+    const privateTile = dialog.getByRole('button', { name: 'Team only', exact: true })
     await expect(publicTile).toHaveAttribute('aria-pressed', 'true')
     await privateTile.click()
     await expect(privateTile).toHaveAttribute('aria-pressed', 'true')

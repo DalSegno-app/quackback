@@ -50,9 +50,7 @@ test.describe('Admin Notifications — Empty State', () => {
   test('empty state includes description text', async ({ page }) => {
     await expect(page.locator('[class*="animate-spin"]')).toBeHidden({ timeout: 10000 })
 
-    const description = page.getByText(
-      /you'll see notifications here|status changes|subscribed/i
-    )
+    const description = page.getByText(/you'll see notifications here|status changes|subscribed/i)
     if ((await description.count()) > 0) {
       await expect(description.first()).toBeVisible()
     }
@@ -166,7 +164,8 @@ test.describe('Admin Notifications — Mark All as Read', () => {
 
     const markAllBtn = page.getByRole('button', { name: 'Mark all as read' })
 
-    if ((await markAllBtn.count()) > 0) {
+    // The button stays rendered but disabled with nothing unread, so only click it when enabled
+    if (await markAllBtn.isEnabled()) {
       await markAllBtn.click()
 
       // Button becomes disabled while mutation is pending

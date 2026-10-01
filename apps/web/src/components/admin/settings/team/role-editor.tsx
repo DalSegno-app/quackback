@@ -193,13 +193,6 @@ export function RoleEditor(props: RoleEditorProps) {
     <SettingsPage
       title={isCreate ? 'New role' : (role?.name ?? '')}
       description={readOnly ? role?.description || undefined : undefined}
-      badge={
-        role?.isSystem ? (
-          <Badge size="sm" variant="secondary" shape="pill">
-            Preset
-          </Badge>
-        ) : undefined
-      }
       crumbs={CRUMBS}
       actions={
         canManage && !isCreate ? (
@@ -268,7 +261,7 @@ export function RoleEditor(props: RoleEditorProps) {
         />
       </div>
 
-      <SettingsCard contentClassName="p-0 sm:p-0 divide-y divide-border/50">
+      <SettingsCard flush contentClassName="divide-y divide-border/50">
         {PERMISSION_CATEGORIES.map((category) => {
           const inCategory = visible.filter((p) => p.category === category)
           if (inCategory.length === 0) return null
@@ -384,9 +377,9 @@ export function RoleEditor(props: RoleEditorProps) {
           <div className="flex gap-2">
             {!isCreate && (
               <Button
-                variant="outline"
+                variant="outline-destructive"
                 size="sm"
-                className="mr-auto border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="mr-auto"
                 onClick={() => setDeleteOpen(true)}
               >
                 Delete role

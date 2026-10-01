@@ -12,11 +12,11 @@ export function WorkspaceIdentityCard(props: {
   return (
     <SettingsCard
       title="Workspace"
-      description="Your logo and name, shown across the portal, widget and emails"
+      description="Your logo and name, shown across the portal, widget and emails."
     >
       <div className="flex items-center gap-4">
         <LogoUploader workspaceName={props.workspaceName} />
-        <div className="min-w-0 flex-1 max-w-md space-y-1.5">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <Label htmlFor="workspace-name" className="text-xs text-muted-foreground">
             Workspace name
           </Label>

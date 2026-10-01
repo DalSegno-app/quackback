@@ -138,8 +138,7 @@ function SkillsPage() {
       area="automation"
       description={intl.formatMessage({
         id: 'automation.skills.description',
-        defaultMessage:
-          'Procedures Quinn follows for specific situations. Loaded only when relevant.',
+        defaultMessage: 'Procedures Quinn follows for specific situations.',
       })}
       actions={newButton}
     >
@@ -158,7 +157,7 @@ function SkillsPage() {
           })}
         </p>
       ) : (
-        <SettingsCard contentClassName={skills.length === 0 ? 'p-0' : undefined}>
+        <SettingsCard flush={skills.length === 0}>
           {skills.length === 0 ? (
             <EmptyState
               size="compact"
@@ -171,7 +170,6 @@ function SkillsPage() {
                 id: 'automation.skills.empty',
                 defaultMessage: 'Add a procedure the agents can follow.',
               })}
-              action={newButton}
             />
           ) : (
             <SettingRows>

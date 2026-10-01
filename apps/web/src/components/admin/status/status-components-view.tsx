@@ -40,7 +40,6 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -394,11 +393,11 @@ export function StatusComponentsView() {
   }
 
   return (
-    <div className="max-w-4xl w-full flex flex-col flex-1 min-h-0">
+    <div className="max-w-5xl w-full flex flex-col flex-1 min-h-0">
       <AdminListHeader
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search services…"
+        searchPlaceholder="Search services..."
         action={
           <>
             <Button variant="outline" size="sm" onClick={() => setCreateGroupDialogOpen(true)}>
@@ -513,11 +512,6 @@ export function StatusComponentsView() {
             />
           )}
 
-          <p className="text-xs text-muted-foreground max-w-2xl">
-            Changing a service&apos;s status here updates the public page and uptime history. It
-            never emails subscribers; only publishing a new incident or scheduling maintenance does.
-          </p>
-
           <ComponentFormDialog
             open={createGroupId !== undefined}
             onOpenChange={(o) => !o && setCreateGroupId(undefined)}
@@ -602,7 +596,7 @@ function SortableGroupHeader({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 px-3 py-2 transition-colors ${
+      className={`group flex items-center gap-3 px-3 py-2 transition-colors ${
         isOver ? 'bg-primary/10' : 'bg-muted/40'
       }`}
     >
@@ -614,9 +608,6 @@ function SortableGroupHeader({
         <Bars3Icon className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
       </button>
       <span className="text-sm font-semibold">{group.name}</span>
-      <Badge variant="outline" className="h-5">
-        Group
-      </Badge>
       <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100">
         <Button
           variant="ghost"

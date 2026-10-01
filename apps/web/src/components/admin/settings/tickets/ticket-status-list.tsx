@@ -198,7 +198,7 @@ export function TicketStatusList({
             <SettingsCard
               key={category}
               title={`${TICKET_STATUS_CATEGORY_LABELS[category]} · ${CATEGORY_SLA[category]}`}
-              contentClassName="p-0 sm:p-0"
+              flush
             >
               <SortableContext
                 items={group.map((s) => s.id)}
@@ -287,10 +287,10 @@ function StatusRow({
           <button
             {...attributes}
             {...listeners}
-            className="w-4 shrink-0 touch-none cursor-grab active:cursor-grabbing"
-            aria-label="Reorder"
+            className="touch-none cursor-grab active:cursor-grabbing"
+            aria-label={`Reorder ${status.name}`}
           >
-            <Bars3Icon className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
+            <Bars3Icon className="size-4 text-muted-foreground/70" />
           </button>
         }
         leading={<RowDot color={status.color} />}

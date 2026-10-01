@@ -1,10 +1,12 @@
+import { INLINE_LINK } from '@/components/admin/settings/inline-link'
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { CollapsibleSection } from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { ChevronDownIcon } from '@heroicons/react/24/solid'
 import { SettingsPage } from '@/components/admin/settings/settings-page'
 import { SettingsCard } from '@/components/admin/settings/settings-card'
 import { SettingRow, SettingRows } from '@/components/admin/settings/setting-row'
@@ -80,7 +82,7 @@ export function WidgetInstallPage() {
           href={WIDGET_SKILL_REPO}
           target="_blank"
           rel="noreferrer"
-          className="underline underline-offset-2"
+          className={`${INLINE_LINK} text-[13px]`}
         >
           What the agent does
         </a>
@@ -89,7 +91,7 @@ export function WidgetInstallPage() {
   )
 
   const handInstall = (
-    <CollapsibleSection
+    <InstallSection
       title="Install without an agent"
       description="Copy the snippet, or add the npm package."
     >
@@ -106,7 +108,7 @@ export function WidgetInstallPage() {
         Or add <code className="rounded bg-muted px-1 py-0.5">@quackback/widget</code> and call{' '}
         <code className="rounded bg-muted px-1 py-0.5">Quackback.init</code> with this instance URL.
       </p>
-    </CollapsibleSection>
+    </InstallSection>
   )
 
   const secretBlock = secretQuery.data ? (
@@ -164,7 +166,7 @@ export function WidgetInstallPage() {
             {secretBlock}
           </SettingsCard>
 
-          <SettingsCard contentClassName="p-0 sm:p-0">{handInstall}</SettingsCard>
+          <SettingsCard flush>{handInstall}</SettingsCard>
         </>
       ) : (
         <>
@@ -182,19 +184,47 @@ export function WidgetInstallPage() {
             {connectionRows}
           </SettingsCard>
 
-          <SettingsCard contentClassName="p-0 sm:p-0">
+          <SettingsCard flush>
             {handInstall}
             <div className="border-t border-border/50">
-              <CollapsibleSection
+              <InstallSection
                 title="Signing secret"
                 description="Skip this unless you are installing by hand."
               >
                 {secretBlock}
-              </CollapsibleSection>
+              </InstallSection>
             </div>
           </SettingsCard>
         </>
       )}
     </SettingsPage>
+  )
+}
+
+/** A disclosure row: title and description on the left, the chevron on the right. */
+function InstallSection({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 px-4 py-3 text-left sm:px-6">
+        <span>
+          <span className="block text-sm font-medium">{title}</span>
+          {description && (
+            <span className="mt-0.5 block text-[13px] text-muted-foreground">{description}</span>
+          )}
+        </span>
+        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[panel-open]:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="px-4 pb-4 pt-1 sm:px-6">{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }

@@ -79,7 +79,7 @@ export function WebhooksSettings({ webhooks, entitled }: WebhooksSettingsProps) 
         title="Webhooks"
         description="Receive an HTTP POST when events happen in your workspace."
         action={newWebhookButton}
-        contentClassName="p-0 sm:p-0"
+        flush
       >
         {webhooks.length === 0 ? (
           <EmptyState
@@ -87,7 +87,6 @@ export function WebhooksSettings({ webhooks, entitled }: WebhooksSettingsProps) 
             icon={BoltIcon}
             title="No webhooks yet"
             description="Get notified when posts are created, statuses change or comments arrive."
-            action={newWebhookButton}
           />
         ) : (
           <SettingsList>

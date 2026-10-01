@@ -127,12 +127,15 @@ function AssistantCopilotSettings() {
                       defaultMessage: 'Knowledge',
                     })}
                   </TabsTrigger>
-                  <TabsTrigger value="guidance">
+                  <TabsTrigger
+                    value="guidance"
+                    dirty={dirtyTabs.has('guidance')}
+                    dirtyLabel={unsavedLabel}
+                  >
                     {intl.formatMessage({
                       id: 'automation.agent.tabs.guidance',
                       defaultMessage: 'Guidance',
                     })}
-                    {dirtyTabs.has('guidance') && <UnsavedChangesIndicator label={unsavedLabel} />}
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -142,21 +145,6 @@ function AssistantCopilotSettings() {
               </TabsContent>
 
               <TabsContent value="guidance" keepMounted className="space-y-6">
-                <div className="space-y-1">
-                  <h2 className="text-sm font-medium">
-                    {intl.formatMessage({
-                      id: 'automation.agent.guidanceLayers.title',
-                      defaultMessage: 'How guidance is applied',
-                    })}
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {intl.formatMessage({
-                      id: 'automation.copilot.guidanceLayers.description',
-                      defaultMessage:
-                        'Situational guidance follows each rule’s conditions and scope when Copilot answers a teammate.',
-                    })}
-                  </p>
-                </div>
                 <GuidanceRulesCard agent="copilot" />
               </TabsContent>
             </Tabs>
@@ -190,15 +178,6 @@ function AssistantCopilotSettings() {
           if (navigationBlocker.status === 'blocked') navigationBlocker.proceed()
         }}
       />
-    </>
-  )
-}
-
-function UnsavedChangesIndicator({ label }: { label: string }) {
-  return (
-    <>
-      <span className="size-1.5 rounded-full bg-primary" aria-hidden />
-      <span className="sr-only">{label}</span>
     </>
   )
 }

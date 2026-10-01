@@ -1,119 +1,47 @@
 import type { RuleName } from './admin-consistency.rules'
 
-/** Files (or, for registry-pages, registry paths) that do not comply yet. Entries only shrink. */
+/**
+ * Files (or, for registry-pages, registry paths) that do not comply with a
+ * rule. Every entry is a deliberate exception with its reason above it, or a
+ * Labs entry. The guard fails on an offender that is not listed and on a listed
+ * entry that no longer offends, so entries are only ever removed.
+ */
 export const ALLOWLIST: Record<RuleName, string[]> = {
-  'page-shell': [
-    'components/admin/settings/labs/labs-settings.tsx',
-    'components/admin/settings/security/identity-providers/provider-create-page.tsx',
-    'components/admin/settings/security/identity-providers/provider-detail-page.tsx',
-    'routes/admin/automation.connectors_.$connectorId.tsx',
-    'routes/admin/automation.index.tsx',
-    'routes/admin/settings.billing.tsx',
-    'routes/admin/settings.billing_.checkout.tsx',
-    'routes/admin/settings.domains.tsx',
-    'routes/admin/settings.index.tsx',
-    'routes/admin/settings.security.sso_.new.tsx',
-  ],
-  'page-width': [
-    'components/admin/automation/guidance-rules-card.tsx',
-    'components/admin/automation/workflow-builder/version-history-sheet.tsx',
-    'components/admin/automation/workflow-runs-sheet.tsx',
-    'components/admin/settings/labs/labs-settings.tsx',
-    'components/admin/settings/security/identity-providers/provider-create-page.tsx',
-    'components/admin/settings/security/identity-providers/provider-detail-page.tsx',
-    'routes/admin/automation.connectors_.$connectorId.tsx',
-    'routes/admin/settings.billing.tsx',
-    'routes/admin/settings.billing_.checkout.tsx',
-    'routes/admin/settings.domains.tsx',
-    'routes/admin/settings.security.sso_.new.tsx',
-  ],
+  'page-shell': ['components/admin/settings/labs/labs-settings.tsx'],
+  'page-width': ['components/admin/settings/labs/labs-settings.tsx'],
   'registry-pages': [
-    '/admin/settings/billing',
-    '/admin/settings/domains',
+    // A module label with no page of its own: its URL redirects to the first page of the module.
     '/admin/settings/feedback',
     '/admin/settings/labs',
+    // A module label with no page of its own: its URL redirects to the first page of the module.
     '/admin/settings/support',
   ],
-  'create-labels': ['components/admin/segments/segment-form.tsx'],
-  'no-dashes': [
-    'components/admin/admin-author-hover-card.tsx',
-    'components/admin/automation/attribute-breakdown-card.tsx',
-    'components/admin/automation/workflow-builder/flow-layout.ts',
-    'components/admin/automation/workflow-builder/inspector/action-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/block-body-field.tsx',
-    'components/admin/automation/workflow-builder/inspector/collect-data-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/collect-reply-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/csat-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/let-assistant-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/message-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/reply-time-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/rule-group-builder.tsx',
-    'components/admin/automation/workflow-builder/inspector/trigger-editor.tsx',
-    'components/admin/automation/workflow-builder/step-content.ts',
-    'components/admin/automation/workflow-builder/version-history-sheet.tsx',
-    'components/admin/automation/workflow-graph.ts',
-    'components/admin/automation/workflow-templates.ts',
-    'components/admin/conversation/conversation-tags-editor.tsx',
-    'components/admin/conversation/convert-to-post-dialog.tsx',
-    'components/admin/conversation/saved-messages-column.tsx',
-    'components/admin/inbox/create-ticket-dialog.tsx',
-    'components/admin/inbox/ticket-activity-timeline.tsx',
-    'components/admin/settings/portal-auth/auth-provider-credentials-form.tsx',
-    'components/admin/settings/portal-privacy-dialog.tsx',
-    'components/admin/settings/security/identity-providers/claims-table.tsx',
-    'components/admin/settings/security/identity-providers/outcome-preview-rail.tsx',
-    'components/admin/update-banner.tsx',
-  ],
+  'create-labels': [],
+  'no-dashes': [],
   'tab-icons': [],
   'toggle-rows': [
-    'components/admin/automation/guidance-rules-card.tsx',
-    'components/admin/automation/workflow-builder/inspector/collect-data-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/csat-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/reply-buttons-editor.tsx',
+    // A switch on a provider tile in a card grid, not a setting row.
     'components/admin/settings/auth-shared/oauth-provider-grid.tsx',
+    // A switch inside a dense draggable row of the portal tab list.
     'components/admin/settings/branding/portal-nav-editor.tsx',
-    'components/admin/settings/help-center/domains-languages-tab.tsx',
     'components/admin/settings/labs/labs-settings.tsx',
-    'components/admin/settings/security/identity-providers/claim-mapping-editor.tsx',
+    // The Enabled switch sits in the page header actions, not in a setting row.
     'components/admin/settings/security/identity-providers/provider-detail-page.tsx',
+    // A switch inside a provider list row, not a setting row.
     'components/admin/settings/security/identity-providers/provider-list.tsx',
-    'components/admin/settings/security/identity-providers/sign-in-card.tsx',
+    // A switch inside a dense draggable row.
     'components/admin/settings/statuses/status-list.tsx',
+    // A per-field Visible switch inside a dense draggable row.
     'components/admin/settings/tickets/fields-editor.tsx',
-    'routes/admin/automation.connectors_.$connectorId.tsx',
   ],
   palette: [
+    // Avatar hues picked from the connector's name, so each connector keeps its own colour.
     'components/admin/automation/connectors/connector-mark.tsx',
-    'components/admin/automation/connectors/connector-status-badge.tsx',
-    'components/admin/automation/workflow-builder/canvas.tsx',
-    'components/admin/automation/workflow-builder/inspector/collect-data-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/inspector-panel.tsx',
-    'components/admin/automation/workflow-builder/inspector/reply-buttons-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/reply-time-editor.tsx',
-    'components/admin/automation/workflow-builder/inspector/rule-group-builder.tsx',
-    'components/admin/automation/workflow-builder/inspector/trigger-editor.tsx',
-    'components/admin/automation/workflow-builder/json-panel.tsx',
-    'components/admin/automation/workflow-builder/outline-rail.tsx',
-    'components/admin/automation/workflow-builder/step-list.tsx',
+    // The step kind colours that colour-code the workflow builder (trigger, branch, action, wait).
     'components/admin/automation/workflow-builder/step-visuals.tsx',
-    'components/admin/automation/workflow-builder/top-bar.tsx',
-    'components/admin/automation/workflow-runs-sheet.tsx',
-    'components/admin/automation/workflow-template-gallery.tsx',
+    // One icon tint per template category.
     'components/admin/automation/workflow-templates.ts',
-    'components/admin/settings/billing/free-downgrade-dialog.tsx',
-    'components/admin/settings/help-center/domains-languages-tab.tsx',
-    'components/admin/settings/imports/import-csv.tsx',
+    // Per-provider brand tints for integration badges.
     'components/admin/settings/integrations/integration-ui.tsx',
-    'components/admin/settings/portal-auth/auth-provider-credentials-form.tsx',
-    'components/admin/settings/security/identity-providers/attribute-writes-preview.tsx',
-    'components/admin/settings/security/identity-providers/claims-table.tsx',
-    'components/admin/settings/security/identity-providers/connection-card.tsx',
-    'components/admin/settings/security/identity-providers/domains-section.tsx',
-    'components/admin/settings/security/identity-providers/outcome-preview-rail.tsx',
-    'components/admin/settings/security/identity-providers/provider-detail-page.tsx',
-    'components/admin/settings/security/identity-providers/user-details-card.tsx',
-    'components/admin/settings/security/sso/use-sso-test-sign-in.tsx',
-    'routes/admin/automation.connectors_.$connectorId.tsx',
-    'routes/admin/settings.billing.tsx',
   ],
 }

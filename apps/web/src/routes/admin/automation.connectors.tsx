@@ -87,7 +87,7 @@ function ConnectorsPage() {
           })}
         </p>
       ) : (
-        <SettingsCard contentClassName="p-0">
+        <SettingsCard flush>
           {connectors.length === 0 && (
             <EmptyState
               size="compact"
@@ -101,7 +101,6 @@ function ConnectorsPage() {
                 defaultMessage:
                   'Connectors call external servers from your workspace. Only connect servers you trust.',
               })}
-              action={addButton}
             />
           )}
           {connectors.map((connector, index) => (
@@ -149,7 +148,7 @@ function ConnectorsPage() {
                       return
                     }
                     refresh.mutate(connector.id, {
-                      onError: () => toast.error('Could not retry'),
+                      onError: () => toast.error('Could not refresh the connection. Try again.'),
                     })
                   }}
                 >
@@ -165,7 +164,7 @@ function ConnectorsPage() {
                         })
                       : intl.formatMessage({
                           id: 'automation.connectors.retry',
-                          defaultMessage: 'Retry',
+                          defaultMessage: 'Try again',
                         })}
                 </Button>
               )}

@@ -188,12 +188,6 @@
   color: currentColor;
 }
 
-[data-visual-theme='refined'] .nav-row.font-medium .tabular-nums,
-[data-visual-theme='refined'] .nav-row.bg-muted .tabular-nums,
-[data-visual-theme='refined'] .nav-row[aria-selected='true'] .tabular-nums {
-  color: var(--accent-ink);
-}
-
 [data-visual-theme='refined'] .nav-section {
   font-size: 13px;
   font-weight: 600;
@@ -380,6 +374,13 @@
   background: transparent;
   box-shadow: none;
   border-color: var(--border);
+}
+
+/* A danger card keeps its red tint over the shared panel border. */
+[data-visual-theme='refined']
+  [data-settings-page]
+  .rounded-xl.border.bg-card[data-settings-card][data-variant='danger'] {
+  border-color: color-mix(in oklab, var(--destructive) 40%, transparent);
 }
 
 [data-visual-theme='refined'] [data-settings-page] [data-settings-list] a:hover,

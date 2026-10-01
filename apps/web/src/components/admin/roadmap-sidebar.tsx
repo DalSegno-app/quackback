@@ -122,7 +122,7 @@ export function RoadmapSidebar({ selectedRoadmapId, onSelectRoadmap }: RoadmapSi
       className="w-64 xl:w-72 shrink-0 flex flex-col border-r border-border/50 bg-card/30 overflow-hidden"
     >
       <div className="shrink-0 px-4 py-3.5">
-        <PageHeader title="Roadmap" />
+        <PageHeader as="h2" title="Roadmap" />
       </div>
 
       {/* Selector + list — the "Roadmaps" subheading routes through the shared
@@ -177,7 +177,7 @@ export function RoadmapSidebar({ selectedRoadmapId, onSelectRoadmap }: RoadmapSi
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100 -mr-1"
+                          className="size-5 opacity-0 group-hover:opacity-100 -mr-1"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <EllipsisVerticalIcon className="h-4 w-4" />

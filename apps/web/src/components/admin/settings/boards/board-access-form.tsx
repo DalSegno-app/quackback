@@ -42,6 +42,7 @@ import {
   DEFAULT_BOARD_ACCESS,
 } from '@/lib/shared/db-types'
 import { accessForPreset } from '@/lib/shared/schemas/boards'
+import { INLINE_LINK } from '@/components/admin/settings/inline-link'
 
 /**
  * Per-board access form (R3 design).
@@ -73,25 +74,23 @@ interface TierMeta {
   icon: React.ComponentType<{ className?: string }>
 }
 
-// Tier icons use semantic muted token; the open→restrictive color ramp is
-// shown once on the legend swatch only (a documented data-viz exception),
-// so it stays out of the matrix cells where it would not theme correctly.
+// Tier icons use the semantic muted token so the matrix themes correctly.
 const TIERS: readonly TierMeta[] = [
   {
     id: 'anonymous',
-    label: 'Anyone',
-    blurb: 'Public · no sign-in',
+    label: 'Everyone',
+    blurb: 'No sign-in needed',
     icon: GlobeAltIcon,
   },
   {
     id: 'authenticated',
-    label: 'Signed-in',
-    blurb: 'Any logged-in user',
+    label: 'Signed-in users',
+    blurb: 'Any signed-in user',
     icon: UsersIcon,
   },
   {
     id: 'segments',
-    label: 'Segments',
+    label: 'Specific segments',
     blurb: 'Specific audiences',
     icon: TagIcon,
   },
@@ -143,14 +142,14 @@ function tiersForPreset(id: Exclude<PresetName, 'custom'>): Record<ActionId, Acc
 export const PRESET_META: readonly PresetMeta[] = [
   {
     id: 'public',
-    label: 'Public',
+    label: 'Everyone',
     description: 'Anyone can view. Sign-in is required to vote, comment, or submit.',
     icon: GlobeAltIcon,
     tiers: tiersForPreset('public'),
   },
   {
     id: 'private',
-    label: 'Private',
+    label: 'Team only',
     description: 'Only workspace members can access this board. Hidden from the portal.',
     icon: LockClosedIcon,
     tiers: tiersForPreset('private'),
@@ -384,31 +383,15 @@ export function BoardAccessForm({ board }: BoardAccessFormProps) {
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
       <div className="space-y-4">
-        <p className="text-xs text-muted-foreground max-w-xl">
-          Pick a preset, or tweak any cell to fine-tune. Custom is set automatically when your
-          configuration doesn&apos;t match a preset.
+        <p className="text-[13px] text-muted-foreground">
+          Pick a preset, or change any cell to fine-tune.
         </p>
 
         <PresetGrid active={activePreset} onSelect={handlePresetClick} />
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-sm font-semibold">Per-action permissions</span>
-          <span className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-            {/* Legend swatch: the open→restrictive color ramp is a deliberate
-                data-viz signal and is the sole sanctioned literal-color use
-                in this form (it never appears in the themed matrix cells). */}
-            <span
-              className="inline-block h-1 w-5 rounded-sm"
-              style={{
-                background:
-                  'linear-gradient(to right, rgb(74 222 128), rgb(250 204 21), rgb(248 113 113))',
-              }}
-            />
-            More open <span className="opacity-60">→</span> More restrictive
-          </span>
-        </div>
+        <span className="block text-sm font-semibold">Per-action permissions</span>
 
         <Matrix
           values={values}
@@ -426,7 +409,7 @@ export function BoardAccessForm({ board }: BoardAccessFormProps) {
           <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
             <GlobeAltIcon className="h-3 w-3 shrink-0" />
             <span>
-              Workspace policy disables the <span className="text-foreground">Anyone</span> tier
+              Workspace policy disables the <span className="text-foreground">Everyone</span> tier
               for:{' '}
               <span className="text-foreground">
                 {wsBlockedActions.map((a) => a.label).join(', ')}
@@ -436,7 +419,7 @@ export function BoardAccessForm({ board }: BoardAccessFormProps) {
             <Link
               to="/admin/settings/security/authentication"
               search={{ tab: 'portal-access' }}
-              className="ml-auto whitespace-nowrap text-primary hover:underline"
+              className={`${INLINE_LINK} ml-auto whitespace-nowrap`}
             >
               Workspace access →
             </Link>
@@ -582,16 +565,16 @@ function Matrix({
         aria-label="Permissions matrix"
       >
         <div
-          className="grid min-w-[560px] bg-muted/40 border-b text-xs uppercase tracking-wider text-muted-foreground"
+          className="grid min-w-[560px] bg-muted/40 border-b text-xs text-muted-foreground"
           style={{ gridTemplateColumns: '1.5fr repeat(4, 1fr)' }}
         >
           <div className="px-4 py-2.5 font-medium">Action</div>
           {TIERS.map((t) => (
             <div
               key={t.id}
-              className="flex flex-col items-center justify-center gap-0.5 border-l py-2 text-center normal-case"
+              className="flex flex-col items-center justify-start gap-0.5 border-l px-1 py-2.5 text-center"
             >
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+              <div className="flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-foreground">
                 <span className="text-muted-foreground">
                   <t.icon className="h-3 w-3" />
                 </span>
@@ -967,7 +950,7 @@ function SegmentPicker({
             {selected.length}/{allSegments.length} selected
           </span>
         </span>
-        <Link to="/admin/users" className="text-primary hover:underline">
+        <Link to="/admin/users" className={INLINE_LINK}>
           Manage →
         </Link>
       </div>

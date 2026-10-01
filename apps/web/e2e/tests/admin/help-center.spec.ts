@@ -17,14 +17,14 @@ import { test, expect } from '@playwright/test'
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Enable the help center feature flag via the settings UI. */
+/** Enable the Help Center module with its switch on the General settings page. */
 async function enableHelpCenter(page: import('@playwright/test').Page): Promise<void> {
-  await page.goto('/admin/settings/help-center')
+  await page.goto('/admin/settings/general')
   await page.waitForLoadState('networkidle')
 
-  const toggle = page.getByRole('switch').first()
-  const isChecked = await toggle.isChecked().catch(() => false)
-  if (!isChecked) {
+  const toggle = page.getByRole('switch', { name: 'Help Center' })
+  await expect(toggle).toBeVisible({ timeout: 10000 })
+  if (!(await toggle.isChecked())) {
     await toggle.click()
     await expect(toggle).toBeChecked({ timeout: 5000 })
     await page.waitForLoadState('networkidle')
@@ -59,7 +59,7 @@ async function createAndOpenArticle(
   await page.goto('/admin/help-center')
   await page.waitForLoadState('networkidle')
 
-  const newButton = page.getByRole('button', { name: 'New article' })
+  const newButton = page.getByRole('button', { name: 'New article' }).first()
   if ((await newButton.count()) === 0) return null
   await newButton.click()
 
@@ -90,7 +90,7 @@ test.describe('Help Center admin navigation', () => {
     await page.goto('/admin')
     await page.waitForLoadState('networkidle')
 
-    const helpCenterLink = page.getByRole('link', { name: 'Help Center' })
+    const helpCenterLink = page.getByRole('link', { name: 'Help Center' }).first()
     await expect(helpCenterLink).toBeVisible({ timeout: 10000 })
     await helpCenterLink.click()
 
@@ -103,7 +103,7 @@ test.describe('Help Center admin navigation', () => {
     await page.waitForLoadState('networkidle')
 
     const content = page
-      .getByText('No articles yet')
+      .getByText('Write your first article')
       .or(page.getByText(/\d+ articles?/))
       .or(page.getByText(/article/i).first())
 
@@ -123,7 +123,9 @@ test.describe('Help Center category management', () => {
   })
 
   test('offers New article in the header and New category in the pane', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'New article' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: 'New article' }).first()).toBeVisible({
+      timeout: 10000,
+    })
     await expect(page.getByRole('button', { name: 'New category' })).toBeVisible()
   })
 
@@ -156,7 +158,7 @@ test.describe('Help Center article creation', () => {
   })
 
   test('can open create article dialog from the New article button', async ({ page }) => {
-    const newButton = page.getByRole('button', { name: 'New article' })
+    const newButton = page.getByRole('button', { name: 'New article' }).first()
     await expect(newButton).toBeVisible({ timeout: 10000 })
     await newButton.click()
 
@@ -175,7 +177,7 @@ test.describe('Help Center article creation', () => {
   })
 
   test('create article dialog can be dismissed with Escape', async ({ page }) => {
-    const newButton = page.getByRole('button', { name: 'New article' })
+    const newButton = page.getByRole('button', { name: 'New article' }).first()
     await expect(newButton).toBeVisible({ timeout: 10000 })
     await newButton.click()
 
@@ -314,10 +316,7 @@ test.describe('Help Center article author', () => {
     await expect(articleCards.first()).toBeVisible()
   })
 
-  test('article editor remains stable after setting author via API', async ({
-    page,
-    request,
-  }) => {
+  test('article editor remains stable after setting author via API', async ({ page, request }) => {
     const url = await createAndOpenArticle(page)
     if (!url) return
 
@@ -481,9 +480,13 @@ test.describe('Help Center article SEO description', () => {
     await page.getByRole('button', { name: /save changes/i }).click()
     // Wait for save
     await expect(
-      page.getByRole('button', { name: /saving/i }).or(page.getByRole('button', { name: /save changes/i }))
+      page
+        .getByRole('button', { name: /saving/i })
+        .or(page.getByRole('button', { name: /save changes/i }))
     ).toBeVisible({ timeout: 5000 })
-    await expect(page.getByRole('button', { name: /save changes/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /save changes/i })).toBeVisible({
+      timeout: 10000,
+    })
 
     // Reload and verify the description was persisted
     await page.reload()
@@ -534,7 +537,9 @@ test.describe('Help Center article list filtering - status', () => {
     await addFilterButton.click()
 
     // Popover should list Status and Category
-    await expect(page.getByText('Status')).toBeVisible({ timeout: 3000 })
+    const menu = page.locator('[data-slot="popover-content"]')
+    await expect(menu.getByRole('button', { name: 'Status' })).toBeVisible({ timeout: 3000 })
+    await expect(menu.getByRole('button', { name: 'Category' })).toBeVisible()
   })
 
   test('can apply Draft status filter', async ({ page }) => {
@@ -542,15 +547,16 @@ test.describe('Help Center article list filtering - status', () => {
     if ((await addFilterButton.count()) === 0) return
 
     await addFilterButton.click()
-    await page.getByText('Status').click()
+    const menu = page.locator('[data-slot="popover-content"]')
+    await menu.getByRole('button', { name: 'Status' }).click()
 
     // Status sub-menu shows Draft and Published
-    await expect(page.getByRole('button', { name: 'Draft' })).toBeVisible({ timeout: 3000 })
-    await page.getByRole('button', { name: 'Draft' }).click()
+    await expect(menu.getByRole('button', { name: 'Draft' })).toBeVisible({ timeout: 3000 })
+    await menu.getByRole('button', { name: 'Draft' }).click()
     await page.waitForLoadState('networkidle')
 
     // A filter chip for Status: Draft should now be visible
-    await expect(page.getByText('Draft')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Draft', { exact: true }).last()).toBeVisible({ timeout: 5000 })
   })
 
   test('can apply Published status filter', async ({ page }) => {
@@ -558,13 +564,16 @@ test.describe('Help Center article list filtering - status', () => {
     if ((await addFilterButton.count()) === 0) return
 
     await addFilterButton.click()
-    await page.getByText('Status').click()
+    const menu = page.locator('[data-slot="popover-content"]')
+    await menu.getByRole('button', { name: 'Status' }).click()
 
-    await expect(page.getByRole('button', { name: 'Published' })).toBeVisible({ timeout: 3000 })
-    await page.getByRole('button', { name: 'Published' }).click()
+    await expect(menu.getByRole('button', { name: 'Published' })).toBeVisible({ timeout: 3000 })
+    await menu.getByRole('button', { name: 'Published' }).click()
     await page.waitForLoadState('networkidle')
 
-    await expect(page.getByText('Published')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Published', { exact: true }).last()).toBeVisible({
+      timeout: 5000,
+    })
   })
 
   test('status filter chip can be removed', async ({ page }) => {
@@ -573,8 +582,9 @@ test.describe('Help Center article list filtering - status', () => {
     if ((await addFilterButton.count()) === 0) return
 
     await addFilterButton.click()
-    await page.getByText('Status').click()
-    await page.getByRole('button', { name: 'Draft' }).click()
+    const menu = page.locator('[data-slot="popover-content"]')
+    await menu.getByRole('button', { name: 'Status' }).click()
+    await menu.getByRole('button', { name: 'Draft' }).click()
     await page.waitForLoadState('networkidle')
 
     // Remove the filter by clicking the × on the chip
@@ -633,7 +643,9 @@ test.describe('Help Center article list filtering - status', () => {
     await page.waitForLoadState('networkidle')
 
     await expect(
-      page.getByText('No articles match your search').or(page.getByText('No articles match your filters'))
+      page
+        .getByText('No articles match your search')
+        .or(page.getByText('No articles match your filters'))
     ).toBeVisible({ timeout: 10000 })
   })
 })
@@ -721,9 +733,7 @@ test.describe('Help Center article list item actions', () => {
       await ellipsisButton.last().click()
 
       await expect(page.getByRole('menuitem', { name: /edit/i })).toBeVisible({ timeout: 3000 })
-      await expect(
-        page.getByRole('menuitem', { name: /delete/i })
-      ).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: /delete/i })).toBeVisible()
 
       await page.keyboard.press('Escape')
     }

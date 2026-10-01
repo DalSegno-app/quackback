@@ -4,8 +4,10 @@ import { useIntl } from 'react-intl'
 import { usePermission } from '@/lib/client/hooks/use-permission'
 import { PERMISSIONS } from '@/lib/shared/permissions'
 import { WHO_REPLIES_FIRST } from '@/lib/shared/assistant/who-replies-first'
+import { SettingsCard } from '@/components/admin/settings/settings-card'
 import type { FeatureFlags } from '@/lib/shared/types/settings'
 import { useWorkspaceSettings } from '@/lib/client/hooks/use-root-context'
+import { INLINE_LINK } from '@/components/admin/settings/inline-link'
 
 /**
  * The rule the server enforces: the agent answers first, and a live
@@ -43,13 +45,12 @@ export function WhoRepliesFirstCard() {
   }
 
   return (
-    <section className="rounded-xl border border-border/50 bg-card px-[18px] py-3.5 shadow-sm">
-      <h2 className="mb-1.5 text-[13px] font-semibold">
-        {intl.formatMessage({
-          id: WHO_REPLIES_FIRST.titleId,
-          defaultMessage: WHO_REPLIES_FIRST.title,
-        })}
-      </h2>
+    <SettingsCard
+      title={intl.formatMessage({
+        id: WHO_REPLIES_FIRST.titleId,
+        defaultMessage: WHO_REPLIES_FIRST.title,
+      })}
+    >
       <ol className="list-decimal space-y-0.5 pl-[18px] text-xs leading-[1.7] text-muted-foreground">
         {WHO_REPLIES_FIRST.steps.map((step) => (
           <li key={step.id}>
@@ -62,7 +63,7 @@ export function WhoRepliesFirstCard() {
           {showManageQuinn && (
             <Link
               to="/admin/automation/agent"
-              className="font-semibold text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              className={`${INLINE_LINK} focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50`}
             >
               {intl.formatMessage({
                 id: 'automation.whoRepliesFirst.manageQuinn',
@@ -73,7 +74,7 @@ export function WhoRepliesFirstCard() {
           {showManageWorkflows && (
             <Link
               to="/admin/automation/workflows"
-              className="font-semibold text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              className={`${INLINE_LINK} focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50`}
             >
               {intl.formatMessage({
                 id: 'automation.whoRepliesFirst.manageWorkflows',
@@ -84,7 +85,7 @@ export function WhoRepliesFirstCard() {
           {showOfficeHours && (
             <Link
               to="/admin/settings/office-hours"
-              className="font-semibold text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              className={`${INLINE_LINK} focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50`}
             >
               {intl.formatMessage({
                 id: 'automation.whoRepliesFirst.officeHoursLink',
@@ -94,6 +95,6 @@ export function WhoRepliesFirstCard() {
           )}
         </div>
       )}
-    </section>
+    </SettingsCard>
   )
 }

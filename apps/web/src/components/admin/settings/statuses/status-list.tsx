@@ -212,7 +212,7 @@ export function StatusesSettingsPage({ initialStatuses }: StatusListProps) {
               key={category}
               title={CATEGORY_INFO[category].label}
               description={CATEGORY_INFO[category].description}
-              contentClassName="p-0 sm:p-0"
+              flush
             >
               <div className="flex items-center gap-3 px-4 py-2 text-[13px] text-muted-foreground sm:px-6">
                 <span className="flex-1" />
@@ -310,7 +310,8 @@ function SortableStatusItem({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  // The default status is locked; the last status in a category cannot go either.
+  // The default status and the last status in a category cannot be deleted; both show a lock.
+  const locked = status.isDefault || !canDelete
   const actions = [
     { label: 'Edit', onSelect: onEdit },
     ...(status.isDefault
@@ -350,14 +351,18 @@ function SortableStatusItem({
         title={
           <span className="inline-flex items-center gap-1.5">
             {status.name}
-            {status.isDefault && (
+            {locked && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <LockClosedIcon aria-label="Locked" className="size-3 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Default status for new posts. It cannot be removed.</p>
+                    <p>
+                      {status.isDefault
+                        ? 'Default status for new posts. It cannot be removed.'
+                        : 'The last status in a category cannot be removed.'}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

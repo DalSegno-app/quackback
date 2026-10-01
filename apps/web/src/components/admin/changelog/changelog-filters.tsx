@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { PlusIcon } from '@heroicons/react/16/solid'
+import { MegaphoneIcon } from '@heroicons/react/16/solid'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { MENU_ROW } from '@/components/ui/menu'
+import { FilterAddButton } from '@/components/shared/filter-chip'
 import { cn } from '@/lib/shared/utils'
 import { FilterSection } from '@/components/shared/filter-section'
 import { FilterList } from '@/components/admin/feedback/single-select-filter-list'
@@ -29,13 +30,13 @@ export function ChangelogFiltersPanel({ status, onStatusChange }: ChangelogFilte
           onSelect={(id) => onStatusChange(id as ChangelogStatusFilter)}
           renderItem={(item) => (
             <span className="flex min-w-0 flex-1 items-center gap-2">
-              {item.color && (
-                <span
-                  className="h-2.5 w-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: item.color }}
-                  aria-hidden="true"
-                />
-              )}
+              <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden="true">
+                {item.color ? (
+                  <span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                ) : (
+                  <MegaphoneIcon className="size-4" />
+                )}
+              </span>
               <span className="truncate">{item.name}</span>
             </span>
           )}
@@ -58,20 +59,7 @@ export function ChangelogFilterButton({ status, onStatusChange }: ChangelogFilte
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            'inline-flex items-center gap-1 px-2 py-0.5',
-            'rounded-full text-[13px]',
-            'border border-dashed border-border/50',
-            'text-muted-foreground hover:text-foreground',
-            'hover:border-border hover:bg-muted/30',
-            'transition-colors'
-          )}
-        >
-          <PlusIcon className="h-3 w-3" />
-          Filter
-        </button>
+        <FilterAddButton />
       </PopoverTrigger>
       <PopoverContent align="start" className="w-44 p-1">
         {CHANGELOG_STATUSES.map((item) => (

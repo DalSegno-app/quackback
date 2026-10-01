@@ -8,6 +8,7 @@ import {
   BuildingOffice2Icon,
   CalendarIcon,
   CheckBadgeIcon,
+  CheckCircleIcon,
   ChevronDownIcon,
   ClockIcon,
   FaceSmileIcon,
@@ -15,6 +16,7 @@ import {
   InboxArrowDownIcon,
   PuzzlePieceIcon,
   SparklesIcon,
+  StopCircleIcon,
   TagIcon,
   TicketIcon,
   UserCircleIcon,
@@ -204,7 +206,7 @@ export interface InboxDetailPanelProps {
   /** Distinct GitHub users who have written on this issue. */
   issuePeople?: { principalId: string; displayName: string; avatarUrl: string | null }[]
   /** Whether the viewport shows the panel (DETAIL_PANEL_MEDIA_QUERY, read by
-   *  the inbox route). The panel is `hidden xl:flex`; it only fetches its data
+   *  the inbox route). The panel is `hidden min-[1680px]:flex`; it only fetches its data
    *  when shown, so smaller viewports don't pay for an invisible sidebar. */
   visible: boolean
   /** Renders the panel to fill a sheet instead of as the inline right column. */
@@ -238,7 +240,7 @@ export const InboxDetailPanel = memo(function InboxDetailPanel({
   const flags = useFeatureFlags()
   const asideClassName = overlay
     ? 'flex h-full min-h-0 w-full flex-col overflow-hidden'
-    : 'hidden h-full min-h-0 w-64 shrink-0 flex-col overflow-hidden border-l border-border/50 bg-card/20 min-[1400px]:flex 2xl:w-96'
+    : 'hidden h-full min-h-0 w-80 shrink-0 flex-col overflow-hidden border-l border-border/50 bg-card/20 min-[1680px]:flex'
   // The flag + copilot.use gate, shared with the inbox route's
   // `copilotAvailable` so the Ask Copilot affordances can never disagree
   // with the tab actually existing.
@@ -346,7 +348,7 @@ export const InboxDetailPanel = memo(function InboxDetailPanel({
   const showCreateTicketSlot = !isTicketItem && !ticket && showTickets
 
   const detailsBody = (
-    <ScrollArea className="min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block">
+    <ScrollArea className="min-h-0 flex-1 pe-2.5 [&_[data-slot=scroll-area-viewport]>div]:!block">
       {/* Force Radix's inner viewport wrapper (display:table by default, which
           grows to content width and defeats truncate) to block so children are
           constrained to the panel width and long text clips with an ellipsis. */}
@@ -615,15 +617,15 @@ export const InboxDetailPanel = memo(function InboxDetailPanel({
               ticket's own status lives in the Ticket card above, so it is not
               repeated here. */}
         <div className="space-y-4 border-t border-border/30 pt-4">
-          <span className={MENU_LABEL}>Properties</span>
+          <span className={cn(MENU_LABEL, 'block')}>Properties</span>
           {!isTicketItem && conversation && (
             <>
               {isClosedConversation && endReasonLabel && (
-                <Row label="Ended">
+                <Row icon={StopCircleIcon} label="Ended">
                   <span className="text-sm font-medium text-foreground">{endReasonLabel}</span>
                 </Row>
               )}
-              <Row label="Status">
+              <Row icon={CheckCircleIcon} label="Status">
                 <StatusControl
                   conversationId={conversation.id}
                   status={conversation.status}
@@ -787,13 +789,13 @@ export const InboxDetailPanel = memo(function InboxDetailPanel({
           <div className="space-y-2.5 border-t border-border/30 pt-4">
             <div className="flex items-center justify-between">
               <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <SparklesIcon className="h-4 w-4" /> Quinn AI
+                <SparklesIcon className="h-4 w-4" /> Quinn
               </p>
               <AiOutcomePill outcome={aiActivity.outcome} />
             </div>
             {aiActivity.outcome === 'handed_off' && aiActivity.handoffReason && (
               <p className="text-xs text-muted-foreground">
-                Escalated —{' '}
+                Escalated:{' '}
                 {HANDOFF_REASON_LABELS[aiActivity.handoffReason] ?? aiActivity.handoffReason}
               </p>
             )}

@@ -1,4 +1,4 @@
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { RADIO_TILE_DOT, RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { cn } from '@/lib/shared/utils'
 
 /** The visibility vocabulary shared by Portal access, Changelog and Status. */
@@ -57,7 +57,11 @@ export function VisibilityTiles<T extends string>({
               off ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
             )}
           >
-            <RadioGroupItem value={option.value} disabled={off} className="mt-0.5" />
+            <RadioGroupItem
+              value={option.value}
+              disabled={off}
+              className={cn('mt-0.5', RADIO_TILE_DOT)}
+            />
             <span className="min-w-0">
               <span className="block text-sm font-medium">{option.title}</span>
               {option.description && (

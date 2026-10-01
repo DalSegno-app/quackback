@@ -106,7 +106,7 @@ export function TicketTypesManager({
   }
 
   return (
-    <SettingsCard contentClassName="p-0 sm:p-0">
+    <SettingsCard flush>
       <div className="divide-y divide-border/40">
         {TICKET_TYPES.map((category) => {
           const group = live.filter((t) => t.category === category)
@@ -332,7 +332,7 @@ function TypeEditorDialog({ open, onOpenChange, type, onSaved }: TypeEditorDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[42rem] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit type' : 'New type'}</DialogTitle>
           <DialogDescription>Behavior comes from the category; fields are yours.</DialogDescription>

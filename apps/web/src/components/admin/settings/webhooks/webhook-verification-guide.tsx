@@ -1,3 +1,4 @@
+import { INLINE_LINK } from '@/components/admin/settings/inline-link'
 import { useState, useMemo } from 'react'
 import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/solid'
 import {
@@ -11,6 +12,7 @@ import {
   GoIcon,
   PHPIcon,
 } from '@/components/admin/settings/lang-icons'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/shared/utils'
 import { useCopyToClipboard } from '@/lib/client/hooks/use-copy-to-clipboard'
 
@@ -216,7 +218,23 @@ const WEBHOOK_HEADERS = [
 // Component
 // ——————————————————————————————————————————————————
 
+/** The guide is documentation: a quiet link opens it, so it never competes with the list. */
 export function WebhookVerificationGuide() {
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className={`${INLINE_LINK} text-[13px]`}>
+        How to verify signatures
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="pt-3">
+          <VerificationCard />
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
+function VerificationCard() {
   const [selectedFramework, setSelectedFramework] = useState('node')
   const { copied: copiedCode, copy: copyCode } = useCopyToClipboard()
 

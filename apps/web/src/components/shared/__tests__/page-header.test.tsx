@@ -16,6 +16,17 @@ const { PageHeader } = await import('../page-header')
 afterEach(cleanup)
 
 describe('PageHeader', () => {
+  it('renders a pane title as an h2 so the page keeps its single h1', () => {
+    render(
+      <>
+        <PageHeader as="h2" title="Settings" />
+        <PageHeader title="Boards" />
+      </>
+    )
+    expect(screen.getByRole('heading', { level: 2, name: 'Settings' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+  })
+
   it('renders the title as the page heading with the standard sizes', () => {
     render(<PageHeader title="Boards" description="Where posts live" />)
     const heading = screen.getByRole('heading', { level: 1, name: 'Boards' })
@@ -68,6 +79,20 @@ describe('PageHeader', () => {
     const status = screen.getByText('Saved')
     const action = screen.getByRole('button', { name: 'New board' })
     expect(status.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('lets the title row wrap so badges drop under the title on narrow screens', () => {
+    render(
+      <PageHeader
+        title="Okta"
+        logo={<span>logo</span>}
+        badge={<span>No client secret</span>}
+        actions={<button>Test</button>}
+      />
+    )
+    const row = screen.getByRole('heading', { name: 'Okta' }).parentElement!
+    expect(row.className).toContain('flex-wrap')
+    expect(row.contains(screen.getByText('No client secret'))).toBe(true)
   })
 
   it('renders a badge beside the title', () => {
