@@ -115,10 +115,17 @@ afterEach(() => {
 })
 
 describe('<ImportCsv>', () => {
-  it('explains how author_email and author_name are applied', () => {
+  it('states the column rules in the dropzone hint', () => {
     renderCsv()
-    expect(screen.getByText(/Every row needs author_email or author_name/)).toBeTruthy()
-    expect(screen.getByText(/name-only contact/)).toBeTruthy()
+    expect(screen.getByText(/Needs title and content columns/)).toBeTruthy()
+    expect(screen.getByText(/Each row needs author_email or author_name/)).toBeTruthy()
+    expect(screen.getByText(/Keep source_id filled/)).toBeTruthy()
+  })
+
+  it('offers no Source select, since every CSV imports posts', () => {
+    renderCsv()
+    expect(screen.queryByLabelText('Source')).toBeNull()
+    expect(screen.queryByText(/Help center CSV/)).toBeNull()
   })
 
   it('walks upload -> dry-run review -> commit -> done', async () => {

@@ -70,8 +70,8 @@ describe('summarizeEntityCounts', () => {
     )
   })
 
-  it('renders an em dash for empty counts', () => {
-    expect(summarizeEntityCounts({})).toBe('—')
+  it('renders a hyphen for empty counts', () => {
+    expect(summarizeEntityCounts({})).toBe('-')
   })
 })
 
@@ -88,7 +88,7 @@ describe('<ExportHistoryList>', () => {
 
     expect(await screen.findByText('4.0 MB')).toBeTruthy()
     expect(screen.getByText(/1,204 posts/)).toBeTruthy()
-    expect(screen.getByText('Completed')).toBeTruthy()
+    expect(screen.getByText('Completed').className).toContain('text-success')
     const link = screen.getByRole('link', { name: /ZIP/ })
     expect(link.getAttribute('href')).toBe('/api/export/runs/export_run_1/download')
   })
@@ -127,7 +127,7 @@ describe('<ExportWorkspaceAction>', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     renderWithClient(<ExportWorkspaceAction />)
-    const button = await screen.findByRole('button', { name: /Export workspace data/ })
+    const button = await screen.findByRole('button', { name: /^Export$/ })
     fireEvent.click(button)
 
     await waitFor(() => {
