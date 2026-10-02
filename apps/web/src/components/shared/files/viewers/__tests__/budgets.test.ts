@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-import { strToU8, unzipSync, zipSync, type Zippable } from 'fflate'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Inflate, strToU8, unzipSync, zipSync, type Zippable } from 'fflate'
 import { readZipIndex } from '@/lib/shared/files/zip-budget'
 import {
   MAX_ZIP_ENTRIES,
@@ -11,6 +11,8 @@ import {
 import { declareSize, deferSizes, localMethod, markEncrypted, renameInIndex } from './zip-fixtures'
 
 const MB = 1024 * 1024
+
+afterEach(() => vi.restoreAllMocks())
 
 function zipOf(files: Zippable): Uint8Array {
   return zipSync(files, { level: 1 })
@@ -47,9 +49,9 @@ describe('rebuildZipPackage: the index budget', () => {
     v.setUint16(eocd + 10, 0xffff, true)
     v.setUint32(eocd + 16, 0xffffffff, true)
     b.set([0x50, 0x4b, 0x03, 0x04])
-    const started = performance.now()
+    const inflate = vi.spyOn(Inflate.prototype, 'push')
     expect(rebuildZipPackage(b)).toEqual({ ok: false, failure: 'too_large' })
-    expect(performance.now() - started).toBeLessThan(50)
+    expect(inflate).not.toHaveBeenCalled()
   })
 
   it('refuses more entries than the budget allows', () => {
@@ -72,9 +74,9 @@ describe('rebuildZipPackage: the index budget', () => {
     const zip = zipOf(files)
     expect(zip.length).toBeLessThan(MB)
     expect(16 * chunk.length).toBeGreaterThan(MAX_ZIP_UNCOMPRESSED_BYTES)
-    const started = performance.now()
+    const inflate = vi.spyOn(Inflate.prototype, 'push')
     expect(rebuildZipPackage(zip)).toEqual({ ok: false, failure: 'too_large' })
-    expect(performance.now() - started).toBeLessThan(50)
+    expect(inflate).not.toHaveBeenCalled()
   })
 
   it('honours a smaller budget passed by the caller', () => {
@@ -130,20 +132,15 @@ describe('rebuildZipPackage: the rebuilt package', () => {
     })
     const bomb = declareSize(zip, 'xl/worksheets/sheet1.xml', 1024)
     expect(bomb.length).toBeLessThan(MB)
+    const inflate = vi.spyOn(Inflate.prototype, 'push')
     expect(rebuildZipPackage(bomb)).toEqual({ ok: false, failure: 'corrupt' })
-    // Refused at the step that crosses 1 KB, long before the rest inflates.
-    // The fastest of a few runs keeps a stray pause from deciding the result.
-    const fastest = (work: () => void, runs: number) =>
-      Math.min(
-        ...Array.from({ length: runs }, () => {
-          const started = performance.now()
-          work()
-          return performance.now() - started
-        })
-      )
-    const refusing = fastest(() => rebuildZipPackage(bomb), 3)
-    const inflatingAll = fastest(() => unzipSync(zip), 2)
-    expect(refusing).toBeLessThan(inflatingAll / 2)
+    // Observe real inflater input, rather than comparing wall-clock timings
+    // that vary under concurrent build/test load. The guard must start decoding
+    // and stop before consuming the remaining compressed payload.
+    const fed = inflate.mock.calls.reduce((bytes, [chunk]) => bytes + chunk.byteLength, 0)
+    const compressed = readZipIndex(bomb).reduce((bytes, entry) => bytes + entry.compressedSize, 0)
+    expect(fed).toBeGreaterThan(0)
+    expect(fed).toBeLessThan(compressed / 2)
   })
 
   it('refuses a package whose local header disagrees with its index', () => {

@@ -257,7 +257,6 @@ vi.mock('@/components/ui/rich-text-editor', async () => {
       }))
       return <textarea ref={areaRef} data-testid="editor" placeholder={placeholder} readOnly />
     },
-    RichTextContent: () => null,
   }
 })
 vi.mock('@/components/shared/composer-attachment-tray', () => ({
