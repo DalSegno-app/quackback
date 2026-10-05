@@ -274,11 +274,16 @@ async function createAuth() {
     return minted
   }
 
-  const providerRows = await listIdentityProviders()
+  // The same row the build takes auth_config_version from, so the redirect
+  // styles match the version this instance is cached under.
+  const providerRows = await listIdentityProviders({
+    authConfig: workspaceSettings?.settings?.authConfig ?? null,
+  })
   const oidcConfigs = await buildGenericOAuthConfigs({
     providers: providerRows,
     creds: getIdentityProviderCredentials,
     tierAllowsOidc: tierLimits.features.customOidcProvider,
+    baseUrl: config.baseUrl,
     discovery: (discoveryUrl) => fetchJson(discoveryUrl),
     fetchUserInfo: (url, accessToken) => fetchJson(url, { authorization: `Bearer ${accessToken}` }),
     // Observe-then-enforce: log the discrepancy so its real rate is known
