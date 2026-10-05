@@ -72,6 +72,8 @@ import {
 } from './settings.helpers'
 import { withCurrentStorageReadTokens } from '@/lib/server/content/storage-read-urls'
 
+import { logSettingsReadError } from './settings-log'
+
 const log = logger.child({ component: 'settings' })
 
 /** Mint current `?read=` tokens on a public welcome card. Persist stays unsigned. */
@@ -177,7 +179,7 @@ export async function getAuthConfig(freshness: SettingsFreshness = 'cached'): Pr
     const org = await readSettingsRow(freshness)
     return parseJsonConfig(org.authConfig, DEFAULT_AUTH_CONFIG)
   } catch (error) {
-    log.error({ err: error }, 'get auth config failed')
+    logSettingsReadError(log, error, 'get auth config failed')
     wrapDbError('fetch auth config', error)
   }
 }
@@ -630,7 +632,7 @@ export async function getPortalConfig(
     const org = await readSettingsRow(freshness)
     return parsePortalConfig(org.portalConfig)
   } catch (error) {
-    log.error({ err: error }, 'get portal config failed')
+    logSettingsReadError(log, error, 'get portal config failed')
     wrapDbError('fetch portal config', error)
   }
 }
@@ -853,7 +855,7 @@ export async function getPublicAuthConfig(): Promise<PublicAuthConfig> {
       twoFactor: { required: authConfig.twoFactor?.required ?? false },
     }
   } catch (error) {
-    log.error({ err: error }, 'get public auth config failed')
+    logSettingsReadError(log, error, 'get public auth config failed')
     wrapDbError('fetch public auth config', error)
   }
 }
@@ -882,7 +884,7 @@ export async function getPublicPortalConfig(): Promise<PublicPortalConfig> {
       },
     }
   } catch (error) {
-    log.error({ err: error }, 'get public portal config failed')
+    logSettingsReadError(log, error, 'get public portal config failed')
     wrapDbError('fetch public portal config', error)
   }
 }
@@ -1031,7 +1033,7 @@ async function readWorkspaceSettings(): Promise<WorkspaceSettings | null> {
     await cacheSet(CACHE_KEYS.WORKSPACE_SETTINGS, result, 3600)
     return result
   } catch (error) {
-    log.error({ err: error }, 'get workspace settings failed')
+    logSettingsReadError(log, error, 'get workspace settings failed')
     wrapDbError('fetch settings with all configs', error)
   }
 }

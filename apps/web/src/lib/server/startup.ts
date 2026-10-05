@@ -5,6 +5,7 @@
 import { logger } from '@/lib/server/logger'
 import { getProcessRole, shouldRunWorkers } from './process-role'
 import { config, validateRuntimeConfig } from './config'
+import { logUnusedRedisUrl } from './unused-env'
 
 const log = logger.child({ component: 'startup' })
 
@@ -113,6 +114,8 @@ export function logStartupBanner(): void {
     },
     'server started'
   )
+
+  logUnusedRedisUrl(log)
 
   // One-shot override: run a named fleet job and exit. The live fleet does
   // not use this — hourly and daily sweeps run on the always-on worker — but
@@ -323,8 +326,11 @@ function startBackgroundProcessing(): void {
       setTimeout(() => void jobs.runStatusMaintenanceSweep(), 31_000)
       setInterval(() => void jobs.runStatusMaintenanceSweep(), 5 * 60 * 1000)
 
-      setTimeout(() => void jobs.runFleetMigratorPass(), 90_000)
-      setInterval(() => void jobs.runFleetMigratorPass(), 60 * 60 * 1000)
+      // Walks the workspace registry, which only exists under pooled tenancy.
+      if (config.isPooledTenancy) {
+        setTimeout(() => void jobs.runFleetMigratorPass(), 90_000)
+        setInterval(() => void jobs.runFleetMigratorPass(), 60 * 60 * 1000)
+      }
 
       log.info({ event: 'sweeps.armed' }, 'scheduled sweeps armed')
     })
