@@ -287,6 +287,16 @@ function startBackgroundProcessing(): void {
     )
     .catch((err) => log.error({ err }, 'failed to start telemetry'))
 
+  // One-time copy of files stored before the workspace storage layout into it
+  // (`storage/legacy-relocation.ts`). Single-workspace only: under pooled
+  // tenancy the bucket is shared and a bare key belongs to nobody. Runs in the
+  // background so readiness never waits on a bucket listing.
+  if (!config.isPooledTenancy) {
+    import('@/lib/server/storage/legacy-relocation')
+      .then(({ armLegacyStorageRelocation }) => armLegacyStorageRelocation())
+      .catch((err) => log.error({ err }, 'failed to arm the storage relocation'))
+  }
+
   // The scheduled sweeps. Bodies live in `cron/fleet-jobs.ts` so a one-shot
   // `QUACKBACK_CRON_JOB` run and this timer schedule execute the same code.
   import('@/lib/server/cron/fleet-jobs')
