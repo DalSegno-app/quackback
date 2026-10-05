@@ -13,6 +13,7 @@ Deploy Quackback on your own infrastructure with full control over your data.
 - [Scaling Out](#scaling-out)
 - [Enterprise Edition](#enterprise-edition)
 - [Upgrading](#upgrading)
+  - [Upgrading from 0.13](#upgrading-from-013)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -338,8 +339,9 @@ With a single replica, migrations run automatically on startup. With multiple re
 docker run --rm \
   --network <your-compose-network> \
   -e DATABASE_URL="postgresql://postgres:password@postgres:5432/quackback" \
+  --entrypoint bun \
   ghcr.io/quackbackio/quackback:latest \
-  bun /app/migrate.mjs
+  /app/migrate.mjs
 
 # Then roll out the new image to web and worker replicas
 ```
@@ -391,6 +393,44 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+#### Upgrading from 0.13
+
+There is no rolling upgrade and no downgrade: new migrations are not reversible, so rollback means restoring your backup. Nothing below starts the new stack until step 5, so finish steps 1 to 4 first.
+
+1. **Stop the old stack and back up.** With your existing 0.13 files still in place, stop the app so nothing writes. Do not use `-v`; the volumes must stay:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml stop app
+   ```
+
+   Then take a Postgres dump and an offline snapshot of object storage by following [Migrating the bundled MinIO to Silo](#migrating-the-bundled-minio-to-silo) (it also covers the MinIO to Silo change). When both are saved, run `docker compose -f docker-compose.prod.yml down` (still without `-v`). Never run the old and new versions against the same database.
+
+2. **Update the files.** Pull the new source, set `QUACKBACK_TAG` in `.env`, and make these `.env` changes:
+   - Delete the `REDIS_URL` line. Redis and Dragonfly are no longer used.
+   - Remove `MINIO_IMAGE_TAG` and `MC_IMAGE_TAG`.
+   - Set `SECRET_KEY` to the value your 0.13 instance used. The compose file refuses to start without it.
+   - Set `TRUSTED_PROXY_HOPS`. Behind nginx, Caddy, Traefik or a Cloudflare tunnel, set it to `1` (`2` for a CDN plus a proxy). Left at `0` behind a proxy, every client shares the proxy's IP and one rate-limit bucket, and the app logs a warning. Keep `0` if clients connect directly. See [Reverse Proxy](#reverse-proxy).
+
+3. **Check your database.** `DATABASE_URL` must be a direct or session-mode connection, not a transaction pooler (for example a pooler on port 6543), because realtime uses `LISTEN`/`NOTIFY`. Use PostgreSQL 14 or newer with pgvector 0.5 or newer and the `pg_trgm` extension.
+
+4. **Pull the new image.**
+
+   ```bash
+   docker compose -f docker-compose.prod.yml pull
+   ```
+
+5. **Start once.** The first start runs many migrations and can take several minutes. Do not interrupt it; wait for the app healthcheck to pass.
+
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --remove-orphans
+   ```
+
+6. **Remove the unused Dragonfly volume** once the app is healthy:
+
+   ```bash
+   docker volume rm <project>_dragonfly_data
+   ```
+
 #### Migrating the bundled MinIO to Silo
 
 The bundled storage server is now PGSTY Silo. The `minio` service name, `minio_data` volume, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, and S3 endpoint stay the same. Existing `MINIO_IMAGE_TAG` and `MC_IMAGE_TAG` values are ignored because upstream MinIO tags do not identify Silo releases. After taking the snapshot below, remove those settings from `.env`. Leave `SILO_IMAGE` and `SILO_CLIENT_IMAGE` unset to use the digest-pinned defaults, or set them to complete Silo server/client image references, including your private registry if needed. An upstream MinIO server image requires its original healthcheck and Compose configuration.
@@ -420,7 +460,7 @@ tar -tf "$SILO_MIGRATION_BACKUP/data.tar" > /dev/null
 
 Keep this backup private: it includes credentials and IAM state. Rehearse restoring the archive into a fresh volume with the recorded old image and saved configuration before proceeding. Preserve file ownership and any external encryption keys. Object-format compatibility does not guarantee that old software understands new IAM or bucket metadata; see [Silo migration and recovery guidance](https://silo.pgsty.com/compatibility/migration/#rollback).
 
-After the backup and restore check, follow the usual pull/start steps above. Confirm the `minio` service is healthy and `minio-init` exits successfully, then download an existing attachment and exercise a new upload through Quackback. The production bucket should still deny anonymous direct downloads. Keep the backup and previous image until these checks pass.
+After the backup and restore check, continue with the remaining steps of [Upgrading from 0.13](#upgrading-from-013), or the usual pull/start steps above if you are not coming from 0.13. Confirm the `minio` service is healthy and `minio-init` exits successfully, then download an existing attachment and exercise a new upload through Quackback. The production bucket should still deny anonymous direct downloads. Keep the backup and previous image until these checks pass.
 
 If recovery is needed, stop application writes and restore the pre-upgrade snapshot into a fresh volume using the saved configuration and old image. Account for uploads and credential changes made after the snapshot. Avoid an in-place image downgrade, running old and new servers against the same volume, or `docker compose down -v`, which deletes the data volumes.
 
