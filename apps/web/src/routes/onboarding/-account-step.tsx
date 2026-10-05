@@ -7,6 +7,7 @@ import { useAuthBroadcast } from '@/lib/client/hooks/use-auth-broadcast'
 import { startOidcSignIn } from '@/lib/client/start-oidc-sign-in'
 import type { WorkspaceClaim } from '@/lib/server/functions/onboarding'
 import type { OidcSignInButton } from '@/lib/shared/oidc-sign-in-button'
+import { track } from '@/lib/client/analytics'
 
 /** Sign-in methods the workspace actually allows, in the shape
  *  `PortalAuthFormInline` already consumes on the portal. */
@@ -43,12 +44,15 @@ const ONBOARDING_CALLBACK = '/onboarding'
  * The router context is refreshed FIRST: `/onboarding` decides on the session
  * it can see, and a stale one sends the user straight back to this screen.
  */
-function useAdvanceOnAuthSuccess(): void {
+function useAdvanceOnAuthSuccess(
+  event: 'onboarding_account_created' | 'onboarding_signed_in'
+): void {
   const router = useRouter()
   const navigate = useNavigate()
 
   useAuthBroadcast({
     onSuccess: () => {
+      void track(event)
       void (async () => {
         await router.invalidate()
         await navigate({ to: ONBOARDING_CALLBACK })
@@ -88,7 +92,10 @@ export function AccountStep({ ssoEnabled, claim, authConfig, workspaceName }: Ac
   // complete in a popup that closes itself, and the code step completes in
   // this window with nothing to navigate it. Without this the sign-in worked
   // and the wizard just sat there.
-  useAdvanceOnAuthSuccess()
+  // Only the first-user form creates an account; the others sign an existing
+  // owner in, which a conversion funnel must not count as a sign-up.
+  const signInOnly = ssoEnabled || claim.claimed || !claim.openToClaim
+  useAdvanceOnAuthSuccess(signInOnly ? 'onboarding_signed_in' : 'onboarding_account_created')
 
   if (ssoEnabled) return <SsoStep />
   if (claim.claimed || !claim.openToClaim) {

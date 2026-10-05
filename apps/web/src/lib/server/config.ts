@@ -236,6 +236,12 @@ const configSchema = z
 
     // Telemetry (optional)
     disableTelemetry: envBoolean,
+
+    // Product analytics for the admin app (optional, off unless a key is set)
+    posthogKey: z.preprocess(emptyToUndefined, z.string().optional()),
+    posthogHost: z.preprocess(emptyToUndefined, z.string().url().optional()),
+    posthogUiHost: z.preprocess(emptyToUndefined, z.string().url().optional()),
+    posthogSessionRecording: envBoolean,
   })
   .superRefine((cfg, ctx) => {
     // A wildcard is a routing pattern, never an origin. Refused in every mode:
@@ -376,6 +382,12 @@ function buildConfigFromEnv(): unknown {
 
     // Telemetry
     disableTelemetry: env('DISABLE_TELEMETRY'),
+
+    // Product analytics
+    posthogKey: env('POSTHOG_KEY'),
+    posthogHost: env('POSTHOG_HOST'),
+    posthogUiHost: env('POSTHOG_UI_HOST'),
+    posthogSessionRecording: env('POSTHOG_SESSION_RECORDING'),
   }
 }
 
@@ -666,6 +678,35 @@ export const config = {
   // Telemetry
   get disableTelemetry() {
     return loadConfig().disableTelemetry
+  },
+
+  /**
+   * Browser product analytics for signed-in team members in the admin app,
+   * or null when `POSTHOG_KEY` is unset. The key is a project API key, which
+   * can only write events, so it is safe to hand to the browser.
+   *
+   * `host` is where the browser sends: PostHog itself, or a reverse proxy on
+   * a domain content blockers do not list. `uiHost` is the PostHog app the
+   * toolbar links to; it follows from a PostHog host and must be given as
+   * `POSTHOG_UI_HOST` behind a proxy.
+   */
+  get productAnalytics(): {
+    key: string
+    host: string
+    uiHost: string | null
+    sessionRecording: boolean
+  } | null {
+    const cfg = loadConfig()
+    if (!cfg.posthogKey) return null
+    const host = (cfg.posthogHost ?? 'https://us.i.posthog.com').replace(/\/+$/, '')
+    const region = new URL(host).hostname.match(/^([a-z]+)\.i\.posthog\.com$/)?.[1]
+    return {
+      key: cfg.posthogKey,
+      host,
+      uiHost:
+        cfg.posthogUiHost?.replace(/\/+$/, '') ?? (region ? `https://${region}.posthog.com` : null),
+      sessionRecording: cfg.posthogSessionRecording ?? true,
+    }
   },
 
   // Help center
