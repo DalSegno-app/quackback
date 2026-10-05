@@ -54,6 +54,11 @@
  * hourly for a day afterwards so bare keys an older replica writes during a
  * rolling upgrade are picked up too.
  *
+ * Links to those objects were minted before read tokens and carry none. On a
+ * single-workspace install the storage route still serves such a link while
+ * the bare original remains, reading the relocated copy; see
+ * {@link isPreNamespaceObject}.
+ *
  * It reaches the bucket root through {@link openLegacyRelocationBucket}, which
  * refuses under pooled tenancy and inside any workspace scope. Listing and
  * copying at the root is correct against a bucket that holds one workspace and
@@ -807,6 +812,138 @@ export async function openLegacyRelocationBucket(): Promise<LegacyRelocationBuck
       }
     },
   }
+}
+
+// ============================================================================
+// Token-less links to objects that predate read tokens (single-workspace only)
+// ============================================================================
+
+/**
+ * Private prefixes that were written, and linked, with no read token before
+ * read tokens and the namespace existed. Every other prefix written then is
+ * public today; every other private prefix has always carried a token, so its
+ * bare originals were never reachable without one and stay that way.
+ */
+const PRE_TOKEN_PRIVATE_PREFIXES = new Set(['chat-images', 'uploads', 'widget-images'])
+
+/** How long a bucket answer is reused. A miss is kept briefly in case the key appears. */
+const PRE_NAMESPACE_HIT_TTL_MS = 60 * 60 * 1000
+const PRE_NAMESPACE_MISS_TTL_MS = 5 * 60 * 1000
+/** Entries per answer cache. Exported for tests. */
+export const PRE_NAMESPACE_CACHE_MAX = 10_000
+
+/**
+ * Bare key → when an answer was recorded, bounded and LRU-evicted, entries
+ * fresh for `ttlMs`. Timestamps only, never bytes.
+ */
+function createAnswerCache(ttlMs: number) {
+  const entries = new Map<string, number>()
+  return {
+    /** Whether a fresh answer is held, refreshing its recency; a stale one is dropped. */
+    has(key: string, now: number): boolean {
+      const at = entries.get(key)
+      if (at === undefined) return false
+      entries.delete(key)
+      if (now - at >= ttlMs) return false
+      entries.set(key, at)
+      return true
+    },
+    remember(key: string, now: number): void {
+      entries.delete(key)
+      entries.set(key, now)
+      while (entries.size > PRE_NAMESPACE_CACHE_MAX) {
+        const oldest = entries.keys().next()
+        if (oldest.done) break
+        entries.delete(oldest.value)
+      }
+    },
+  }
+}
+
+/**
+ * Where a pre-namespace original was last seen present (hits) or absent
+ * (misses). Two caches, so a flood of made-up keys fills only the miss cache
+ * and never pushes out a real link's answer. Only ever used by
+ * {@link isPreNamespaceObject}, which refuses under pooled tenancy and inside
+ * any workspace scope, so the one bucket they describe is the one this
+ * process's only workspace owns.
+ */
+const preNamespaceHits = createAnswerCache(PRE_NAMESPACE_HIT_TTL_MS)
+const preNamespaceMisses = createAnswerCache(PRE_NAMESPACE_MISS_TTL_MS)
+
+/**
+ * Whether `key` names an object that existed before the namespace, so a link
+ * to it carries no read token and may be served without one.
+ *
+ * Links minted before read tokens point at `/api/storage/<key>` with nothing
+ * else, and many cannot be re-signed: they are in emails already delivered, on
+ * pages outside the app, and in API clients that stored the URL. The
+ * relocation (`legacy-relocation.ts`) copies such an object to its namespaced
+ * name and keeps the bare original, and nothing written since creates a bare
+ * key, so "the bare original exists" is exactly "this object predates the
+ * namespace". A new upload never has one and keeps needing its token.
+ *
+ * The bare original is only ever asked about, never served: the route still
+ * reads the namespaced copy. That keeps the header's rule that reads never
+ * fall back to a bare key, and it is why this is safe to answer from a HEAD.
+ *
+ * Narrowed on purpose:
+ * - **Single-workspace only.** Under pooled tenancy, or inside any workspace
+ *   scope, a bucket-root key is nobody's namespace, so the answer is no without
+ *   asking.
+ * - **Pre-token private prefixes only** ({@link PRE_TOKEN_PRIVATE_PREFIXES}).
+ *   A key under `w/<workspace>/` is therefore never asked about, so no other
+ *   namespace's object, nor this workspace's own new upload, can stand in for
+ *   a bare original.
+ * - **Canonical keys only.** The key must compose into this workspace's
+ *   namespace, which refuses traversal, encoded traversal, empty and relative
+ *   segments and backslashes, so no spelling of a key borrows another
+ *   object's existence.
+ *
+ * Answers are cached, and only a key with no fresh answer costs a HEAD.
+ * `mayAskBucket` gates that request: the route passes a per-client budget, so
+ * token-less requests for made-up keys cannot turn into unbounded calls to the
+ * object store. Refused, the answer is no, which is the ordinary 403.
+ *
+ * An operator who moved rather than copied the originals has no bare key left,
+ * and those links then need their token like any other private link.
+ */
+export async function isPreNamespaceObject(
+  key: string,
+  mayAskBucket: () => Promise<boolean> = async () => true
+): Promise<boolean> {
+  if (isPooledTenancy() || config.isPooledTenancy) return false
+  if (getCurrentWorkspace()) return false
+  if (!PRE_TOKEN_PRIVATE_PREFIXES.has(key.split('/', 1)[0] ?? '')) return false
+  if (!isS3Usable()) return false
+
+  let connection: S3Config
+  try {
+    composeNamespacedKey(await currentWorkspaceId(), key)
+    connection = getS3Config()
+  } catch {
+    return false
+  }
+
+  const now = Date.now()
+  if (preNamespaceHits.has(key, now)) return true
+  if (preNamespaceMisses.has(key, now)) return false
+  if (!(await mayAskBucket())) return false
+
+  try {
+    const client = await getS3Client(connection)
+    const { HeadObjectCommand } = await getS3Module()
+    await client.send(new HeadObjectCommand({ Bucket: connection.bucket, Key: key }))
+  } catch (err) {
+    // A HEAD of a missing key answers 403 rather than 404 when the credential
+    // may not list the bucket, so both are "absent". Any other failure is not
+    // an answer worth remembering.
+    const status = s3StatusCode(err)
+    if (status === 403 || status === 404) preNamespaceMisses.remember(key, now)
+    return false
+  }
+  preNamespaceHits.remember(key, now)
+  return true
 }
 
 /** The HTTP status an SDK error carries, if any. */
