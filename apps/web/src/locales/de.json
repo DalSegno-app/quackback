@@ -1232,5 +1232,18 @@
   "unsubscribe.error.failed.title": "Etwas ist schiefgelaufen",
   "unsubscribe.error.failed.message": "Wir konnten deine Anfrage nicht verarbeiten. Bitte versuche es später erneut.",
   "unsubscribe.error.expired.title": "Link abgelaufen",
-  "unsubscribe.error.expired.message": "Dieser Abmeldelink wurde bereits verwendet oder ist abgelaufen."
+  "unsubscribe.error.expired.message": "Dieser Abmeldelink wurde bereits verwendet oder ist abgelaufen.",
+  "onboarding.account.inProgress.lead": "Die Einrichtung hat hier schon begonnen. Melde dich mit dem Konto an, das du erstellt hast, um dort weiterzumachen, wo du aufgehört hast.",
+  "onboarding.account.inProgress.notOwner": "Richtet jemand anderes das ein? Bitte die Person, dich nach der Einrichtung einzuladen.",
+  "onboarding.account.inProgress.restart": "Einrichtung versehentlich begonnen oder Anmeldung nicht möglich? Wer den Server betreibt, kann die Einrichtung neu starten.",
+  "onboarding.account.inProgress.title": "Melde dich an, um die Einrichtung abzuschließen",
+  "onboarding.account.methodsDescription": "Erstelle dein Admin-Konto, um diesen Workspace einzurichten.",
+  "onboarding.account.returning.back": "Stattdessen ein neues Konto erstellen",
+  "onboarding.account.returning.lead": "Melde dich mit dem Konto an, das du hier erstellt hast, um die Einrichtung abzuschließen.",
+  "onboarding.account.returning.title": "Willkommen zurück",
+  "onboarding.account.signIn": "Anmelden",
+  "onboarding.account.startedSetup": "Schon mit der Einrichtung begonnen?",
+  "onboarding.workspace.alreadyFinished": "Die Einrichtung ist bereits abgeschlossen.",
+  "onboarding.workspace.signIn": "Anmelden",
+  "onboarding.workspace.signedOut": "Du wurdest abgemeldet. Melde dich an, um die Einrichtung abzuschließen."
 }

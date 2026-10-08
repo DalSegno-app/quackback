@@ -1232,5 +1232,18 @@
   "unsubscribe.error.failed.title": "發生錯誤",
   "unsubscribe.error.failed.message": "無法處理你的要求，請稍後再試。",
   "unsubscribe.error.expired.title": "連結已失效",
-  "unsubscribe.error.expired.message": "此取消訂閱連結已被使用或已過期。"
+  "unsubscribe.error.expired.message": "此取消訂閱連結已被使用或已過期。",
+  "onboarding.account.inProgress.lead": "此處的設定已經開始。請使用你建立的帳戶登入，從上次中斷的地方繼續。",
+  "onboarding.account.inProgress.notOwner": "是別人在設定？請對方在設定完成後邀請你。",
+  "onboarding.account.inProgress.restart": "設定是誤啟動的，或是無法登入？伺服器的維運人員可以重新開始設定。",
+  "onboarding.account.inProgress.title": "登入以完成設定",
+  "onboarding.account.methodsDescription": "建立你的管理員帳戶以設定此工作區。",
+  "onboarding.account.returning.back": "改為建立新帳戶",
+  "onboarding.account.returning.lead": "請使用你在此建立的帳戶登入以完成設定。",
+  "onboarding.account.returning.title": "歡迎回來",
+  "onboarding.account.signIn": "登入",
+  "onboarding.account.startedSetup": "已經開始設定了？",
+  "onboarding.workspace.alreadyFinished": "設定已完成。",
+  "onboarding.workspace.signIn": "登入",
+  "onboarding.workspace.signedOut": "你已登出。請登入以完成設定。"
 }

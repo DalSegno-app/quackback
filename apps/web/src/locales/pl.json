@@ -1232,5 +1232,18 @@
   "unsubscribe.error.failed.title": "Coś poszło nie tak",
   "unsubscribe.error.failed.message": "Nie udało się przetworzyć żądania. Spróbuj ponownie później.",
   "unsubscribe.error.expired.title": "Link wygasł",
-  "unsubscribe.error.expired.message": "Ten link do wypisania został już użyty lub wygasł."
+  "unsubscribe.error.expired.message": "Ten link do wypisania został już użyty lub wygasł.",
+  "onboarding.account.inProgress.lead": "Konfiguracja została już tu rozpoczęta. Zaloguj się na utworzone przez siebie konto, aby kontynuować od miejsca, w którym przerwano.",
+  "onboarding.account.inProgress.notOwner": "Ktoś inny to konfiguruje? Poproś tę osobę o zaproszenie po zakończeniu konfiguracji.",
+  "onboarding.account.inProgress.restart": "Konfiguracja rozpoczęta przez pomyłkę albo nie możesz się zalogować? Operator serwera może rozpocząć konfigurację od nowa.",
+  "onboarding.account.inProgress.title": "Zaloguj się, aby dokończyć konfigurację",
+  "onboarding.account.methodsDescription": "Utwórz konto administratora, aby skonfigurować ten obszar roboczy.",
+  "onboarding.account.returning.back": "Zamiast tego utwórz nowe konto",
+  "onboarding.account.returning.lead": "Zaloguj się na konto utworzone tutaj, aby dokończyć konfigurację.",
+  "onboarding.account.returning.title": "Witaj ponownie",
+  "onboarding.account.signIn": "Zaloguj się",
+  "onboarding.account.startedSetup": "Konfiguracja już rozpoczęta?",
+  "onboarding.workspace.alreadyFinished": "Konfiguracja jest już zakończona.",
+  "onboarding.workspace.signIn": "Zaloguj się",
+  "onboarding.workspace.signedOut": "Wylogowano cię. Zaloguj się, aby dokończyć konfigurację."
 }
