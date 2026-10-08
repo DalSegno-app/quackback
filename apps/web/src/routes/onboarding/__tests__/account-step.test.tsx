@@ -345,6 +345,34 @@ describe('account step — a self-hosted first user', () => {
     expect(screen.queryByText(/already has an owner/i)).toBeNull()
   })
 
+  // The fixture carries the shipped default, which lists Google and GitHub as
+  // on. Before setup nothing has credentials for them, so a tile here is a
+  // button that fails, and the first admin is always created with an email.
+  it('offers no social sign-up, even when the config turns providers on', () => {
+    renderStep(selfHosted())
+
+    expect(screen.queryByRole('button', { name: /google/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /github/i })).toBeNull()
+    expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument()
+  })
+
+  // Created here, then signed out before setup finished: signing up again
+  // would only refuse the address, so there is a way to sign back in with the
+  // methods the install takes, providers included.
+  it('lets someone who already started setup sign back in', () => {
+    const props = selfHosted()
+    props.authConfig.signInOAuth = { password: true, github: true }
+    renderStep(props)
+
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Welcome back')
+    expect(screen.getByRole('button', { name: /sign in with github/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /create a new account instead/i }))
+    expect(screen.queryByRole('button', { name: /sign in with github/i })).toBeNull()
+  })
+
   it('drops the password form when an unclaimed workspace has password off', () => {
     const props = selfHosted()
     props.authConfig.oauth = { ...DEFAULT_AUTH_CONFIG.oauth, password: false, magicLink: true }
@@ -356,9 +384,7 @@ describe('account step — a self-hosted first user', () => {
     expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument()
   })
 
-  // Nobody has an account on a workspace nobody has claimed, so offering to
-  // sign in to one is a lie about what the button does.
-  it('offers to sign UP, not in, on a workspace nobody has claimed', () => {
+  it('offers no social or OIDC sign-up when an unclaimed workspace has password off', () => {
     const props = selfHosted()
     props.authConfig.oauth = {
       ...DEFAULT_AUTH_CONFIG.oauth,
@@ -366,10 +392,25 @@ describe('account step — a self-hosted first user', () => {
       magicLink: true,
       google: true,
     }
+    props.authConfig.oidcProviders = [{ id: 'okta', name: 'Okta', logoUrl: null }]
+    renderStep(props)
+
+    expect(screen.queryByRole('button', { name: /google/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /github/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /okta/i })).toBeNull()
+    expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument()
+  })
+
+  // With neither email method the configured providers are the only way to
+  // claim the workspace, so they stay.
+  it('keeps the providers when the workspace has no email method at all', () => {
+    const props = selfHosted()
+    props.authConfig.found = true
+    props.authConfig.oauth = { password: false, magicLink: false, google: true }
+    props.authConfig.registeredAuthProviders = ['google']
     renderStep(props)
 
     expect(screen.getByRole('button', { name: /sign up with google/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /sign in with google/i })).toBeNull()
   })
 
   // `openSignup` governs who may open a PORTAL account. Applied to the first
@@ -425,6 +466,17 @@ describe('account step — after a sign-in completes', () => {
     renderStep(selfHosted())
     act(() => postAuthSuccess())
     await waitFor(() => expect(track).toHaveBeenCalledWith('onboarding_account_created'))
+  })
+
+  // Someone who already started setup signs back in from the first-user
+  // screen. No account is created, so the funnel must not count one.
+  it('records a returning sign-in from the first-user screen as a sign-in', async () => {
+    track.mockClear()
+    renderStep(selfHosted())
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
+    act(() => postAuthSuccess())
+    await waitFor(() => expect(track).toHaveBeenCalledWith('onboarding_signed_in'))
+    expect(track).not.toHaveBeenCalledWith('onboarding_account_created')
   })
 
   it('records an owner signing in to a claimed workspace as a sign-in', async () => {
